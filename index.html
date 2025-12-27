@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Arcade</title>
+    <title>Mark's Arcades</title>
     <style>
         * {
             margin: 0;
@@ -15,13 +15,17 @@
 
         body {
             font-family: 'Press Start 2P', cursive;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: linear-gradient(135deg, rgba(45, 27, 78, 0.7) 0%, rgba(61, 45, 95, 0.7) 25%, rgba(26, 58, 58, 0.7) 50%, rgba(45, 63, 63, 0.7) 75%, rgba(61, 45, 95, 0.7) 100%), url('background.png');
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             padding: 20px;
+            padding-top: 40px;
             color: #00ff00;
             overflow-x: hidden;
         }
@@ -51,6 +55,7 @@
                 transparent 1px,
                 transparent 2px
             );
+            backdrop-filter: blur(2px);
             pointer-events: none;
             z-index: 1;
             animation: scanlines 8s linear infinite;
@@ -66,6 +71,7 @@
         header {
             margin-bottom: 60px;
             animation: pixelBlink 3s infinite;
+            text-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
         }
 
         h1 {
@@ -73,7 +79,8 @@
             margin-bottom: 10px;
             text-shadow: 
                 3px 3px #ff00ff,
-                6px 6px #00ffff;
+                6px 6px #00ffff,
+                0 0 20px rgba(255, 0, 255, 0.8);
             letter-spacing: 3px;
             color: #ffff00;
         }
@@ -87,9 +94,24 @@
 
         .games-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 40px;
             margin-top: 40px;
+            width: 100%;
+            max-width: 1400px;
+            margin-bottom: 100px;
+        }
+
+        @media (min-width: 1200px) {
+            .games-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .games-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
 
         .game-card {
@@ -103,6 +125,11 @@
                 0 0 20px rgba(0, 255, 0, 0.3);
             position: relative;
             overflow: hidden;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         .game-card::before {
@@ -148,9 +175,22 @@
             font-size: 3em;
             margin-bottom: 15px;
             display: block;
+            position: relative;
+            z-index: 2;
         }
 
         .game-card a {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-card-title {
             display: block;
             text-decoration: none;
             color: #00ff00;
@@ -158,11 +198,12 @@
             letter-spacing: 2px;
             text-shadow: 2px 2px #ff00ff;
             position: relative;
-            z-index: 1;
+            z-index: 2;
             padding: 20px;
+            width: 100%;
         }
 
-        .game-card a:hover {
+        .game-card:hover .game-card-title {
             color: #ffff00;
             text-shadow: 2px 2px #ff00ff;
         }
@@ -172,7 +213,7 @@
             color: #00ffff;
             margin-top: 10px;
             position: relative;
-            z-index: 1;
+            z-index: 2;
         }
 
         footer {
@@ -209,73 +250,59 @@
 <body>
     <div class="container">
         <header>
-            <h1>◆ ARCADE ◆</h1>
+            <h1>◆ MARK'S ARCADES ◆</h1>
             <p class="subtitle">~ PLAY THE GAMES ~</p>
         </header>
 
         <div class="games-grid">
             <!-- Space Odyssey -->
-            <div class="game-card">
+            <a href="Game1 final.html" class="game-card">
                 <span class="game-icon">🚀</span>
-                <a href="Game1Mobile.html">
-                    SPACE ODYSSEY
-                </a>
+                <span class="game-card-title">SPACE ODYSSEY</span>
                 <div class="game-description">Cosmic Adventure</div>
-            </div>
+            </a>
 
             <!-- Bottle Bounce -->
-            <div class="game-card">
+            <a href="butelka.html" class="game-card">
                 <span class="game-icon">🍾</span>
-                <a href="butelka.html">
-                    BOTTLE BOUNCE
-                </a>
+                <span class="game-card-title">BOTTLE BOUNCE</span>
                 <div class="game-description">Bouncy Fun</div>
-            </div>
+            </a>
 
-            <!-- Dancing Robots -->
-            <div class="game-card">
+            <!-- Tanks Fight -->
+            <a href="tanciki f..html" class="game-card">
                 <span class="game-icon">🤖</span>
-                <a href="tanciki f..html">
-                    DANCING ROBOTS
-                </a>
+                <span class="game-card-title">TANKS FIGHT</span>
                 <div class="game-description">Rhythm & Motion</div>
-            </div>
+            </a>
 
-            <!-- Game 1 Final -->
-            <div class="game-card">
+            <!-- Ruin the Brick -->
+            <a href="Game1 final.html" class="game-card">
                 <span class="game-icon">⭐</span>
-                <a href="Game1 final.html">
-                    GAME 1 FINAL
-                </a>
+                <span class="game-card-title">RUIN THE BRICK</span>
                 <div class="game-description">Ultimate Challenge</div>
-            </div>
+            </a>
 
             <!-- Ping Pong -->
-            <div class="game-card">
+            <a href="ping-pong.sb3 final.html" class="game-card">
                 <span class="game-icon">🏓</span>
-                <a href="ping-pong.sb3 final.html">
-                    PING PONG
-                </a>
+                <span class="game-card-title">PING PONG</span>
                 <div class="game-description">Classic Arcade</div>
-            </div>
+            </a>
 
-            <!-- Project Scratch -->
-            <div class="game-card">
-                <span class="game-icon">🎨</span>
-                <a href="Projekt Scratch final.html">
-                    PROJECT SCRATCH
-                </a>
-                <div class="game-description">Creative Challenge</div>
-            </div>
+            <!-- Dino Run -->
+            <a href="Projekt Scratch final.html" class="game-card">
+                <span class="game-icon">🦖</span>
+                <span class="game-card-title">DINO RUN</span>
+                <div class="game-description">Prehistoric Chase</div>
+            </a>
 
             <!-- Rosti Quest -->
-            <div class="game-card">
+            <a href="rosti.html" class="game-card">
                 <span class="game-icon">🍖</span>
-                <a href="rosti.html">
-                    ROSTI QUEST
-                </a>
+                <span class="game-card-title">ROSTI QUEST</span>
                 <div class="game-description">Classic Puzzle Action</div>
-            </div>
+            </a>
 
             <!-- Template for future games - just duplicate and update -->
             <!-- 
