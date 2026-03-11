@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Arena</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', 'Courier', monospace;
+            background: linear-gradient(135deg, rgba(45, 27, 78, 0.7) 0%, rgba(61, 45, 95, 0.7) 25%, rgba(26, 58, 58, 0.7) 50%, rgba(45, 63, 63, 0.7) 75%, rgba(61, 45, 95, 0.7) 100%), url('background.png');
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #00ff00;
+            overflow: hidden;
+        }
+
+        /* Animated background effect */
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.05) 0px,
+                rgba(0, 255, 0, 0.05) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+            z-index: 1;
+            animation: scanlines 8s linear infinite;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            text-shadow: 
+                3px 3px #ff00ff,
+                6px 6px #00ffff,
+                0 0 20px rgba(255, 0, 255, 0.8);
+            letter-spacing: 3px;
+            color: #ffff00;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 0.9em;
+            color: #00ffff;
+            text-shadow: 2px 2px #ff00ff;
+            letter-spacing: 2px;
+        }
+
+        .iframe-container {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16 / 9;
+            border: 3px solid #00ff00;
+            box-shadow: 
+                inset 0 0 0 2px #00ff00,
+                0 0 20px rgba(0, 255, 0, 0.3);
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .iframe-container:hover {
+            box-shadow: 
+                inset 0 0 0 2px #ffff00,
+                0 0 30px rgba(255, 255, 0, 0.5);
+            border-color: #ffff00;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Courier New', 'Courier', monospace;
+            cursor: pointer;
+            font-size: 1em;
+            text-shadow: 2px 2px #ff00ff;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 0 0 25px rgba(255, 255, 0, 0.6);
+            border-color: #ffff00;
+            color: #ffff00;
+            text-shadow: 2px 2px #ff00ff;
+        }
+
+        .btn:active {
+            transform: translate(0, 0);
+        }
+
+        footer {
+            margin-top: 30px;
+            font-size: 0.8em;
+            color: #00ffff;
+            text-shadow: 1px 1px #ff00ff;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .iframe-container {
+                aspect-ratio: auto;
+                min-height: 500px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👾 BUG ARENA 👾</h1>
+            <p class="subtitle">~ SMALL PLAYER? ~</p>
+        </header>
+
+        <div class="iframe-container">
+            <iframe 
+                src="https://arcade.makecode.com/S74227-73031-41389-34568" 
+                allowfullscreen="" 
+                frameborder="0" 
+                sandbox="allow-popups allow-forms allow-scripts allow-same-origin">
+            </iframe>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="goHome()">← BACK HOME</button>
+            <button class="btn" onclick="reloadGame()">🔄 RELOAD</button>
+            <button class="btn" onclick="openFullscreen()">⛶ FULLSCREEN</button>
+        </div>
+
+        <footer>
+            POWERED BY MAKECODE ARCADE
+        </footer>
+    </div>
+
+    <script>
+        function goHome() {
+            window.location.href = 'index.html';
+        }
+
+        function reloadGame() {
+            const iframe = document.querySelector('.iframe-container iframe');
+            iframe.src = iframe.src;
+        }
+
+        function openFullscreen() {
+            const container = document.querySelector('.iframe-container');
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) {
+                container.webkitRequestFullscreen();
+            } else if (container.msRequestFullscreen) {
+                container.msRequestFullscreen();
+            }
+        }
+    </script>
+</body>
+</html>
