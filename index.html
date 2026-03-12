@@ -787,10 +787,46 @@
             requests.push(request);
             localStorage.setItem(LOGIN_REQUESTS_KEY, JSON.stringify(requests));
             
-            alert('📨 REQUEST SENT!\n\nYour admin login request has been sent.\nPlease wait for approval from the system administrator.');
+            // Log to console
+            console.log('%c🔐 ADMIN LOGIN REQUEST SENT', 'color: #00ff00; font-size: 14px; font-weight: bold;');
+            console.log('%cEmail:', 'color: #ffff00; font-weight: bold;', email);
+            console.log('%cRequest ID:', 'color: #ffff00; font-weight: bold;', request.id);
+            console.log('%cTime:', 'color: #ffff00; font-weight: bold;', request.time);
+            console.table(request);
+            console.log('%cTo approve in console, use: approveFromConsole(' + request.id + ')', 'color: #00ff00; font-size: 12px; background: #1a1a1a; padding: 5px;');
+            
+            alert('📨 REQUEST SENT!\n\nYour admin login request has been sent.\nCheck console (F12) for details.');
             document.getElementById('loginEmail').value = '';
             document.getElementById('loginEmail').focus();
         }
+
+        // Console command to approve requests
+        window.approveFromConsole = function(requestId) {
+            let requests = JSON.parse(localStorage.getItem(LOGIN_REQUESTS_KEY) || '[]');
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) {
+                console.error('%c❌ Request not found!', 'color: #ff6b6b; font-weight: bold;');
+                return;
+            }
+            
+            request.status = 'approved';
+            localStorage.setItem(LOGIN_REQUESTS_KEY, JSON.stringify(requests));
+            
+            let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            if (!authorized.includes(request.email)) {
+                authorized.push(request.email);
+                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+            }
+            
+            console.log('%c✅ LOGIN REQUEST APPROVED!', 'color: #00ff00; font-size: 14px; font-weight: bold;');
+            console.log('%cEmail:', 'color: #ffff00; font-weight: bold;', request.email);
+            console.log('%cStatus changed to: APPROVED', 'color: #00ff00; font-weight: bold;');
+            console.table(request);
+            console.log('%cUser can now login. Refresh page in 3 seconds...', 'color: #00ffff;');
+            
+            setTimeout(() => location.reload(), 3000);
+        };
 
         // Setup email input listener
         function setupEmailLogin() {
