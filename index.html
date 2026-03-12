@@ -634,7 +634,7 @@
 
     <script>
         // Admin email
-        const ADMIN_EMAIL = 'zhasan2@gmail.com';
+        const ADMIN_EMAIL = 'zhasanmark2@gmail.com';
         const USERS_KEY = 'marcadesUsers';
         const CURRENT_USER_KEY = 'marcadesCurrentUser';
         const BLOCKED_PLAYERS_KEY = 'marcadesBlockedPlayers';
@@ -677,41 +677,68 @@
         // Google Sign-In
         function initializeGoogleSignIn() {
             document.getElementById('googleLoginBtn').addEventListener('click', () => {
-                google.accounts.id.initialize({
-                    client_id: '764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com',
-                    callback: handleGoogleLogin
-                });
-                google.accounts.id.renderButton(
-                    document.getElementById('googleLoginBtn'),
-                    { theme: 'outline', size: 'large' }
-                );
-                google.accounts.id.prompt();
+                if (typeof google !== 'undefined' && google.accounts) {
+                    try {
+                        google.accounts.id.initialize({
+                            client_id: '764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com',
+                            callback: handleGoogleLogin,
+                            auto_select: false,
+                            cancel_on_tap_outside: true
+                        });
+                        google.accounts.id.prompt((notification) => {
+                            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                                // If prompt fails, show one-tap
+                                showGooglePopup();
+                            }
+                        });
+                    } catch (e) {
+                        showGooglePopup();
+                    }
+                } else {
+                    showGooglePopup();
+                }
             });
         }
 
+        function showGooglePopup() {
+            // Fallback: prompt for email and allow manual login
+            const email = prompt('Enter your Gmail email address:');
+            if (email && email.includes('@')) {
+                loginUser({
+                    email: email,
+                    name: email.split('@')[0],
+                    picture: 'https://via.placeholder.com/150',
+                    provider: 'google'
+                });
+            }
+        }
+
         function handleGoogleLogin(response) {
-            const token = response.credential;
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            
-            const userData = JSON.parse(jsonPayload);
-            loginUser({
-                email: userData.email,
-                name: userData.name,
-                picture: userData.picture,
-                provider: 'google'
-            });
+            try {
+                const token = response.credential;
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const userData = JSON.parse(jsonPayload);
+                loginUser({
+                    email: userData.email,
+                    name: userData.name,
+                    picture: userData.picture,
+                    provider: 'google'
+                });
+            } catch (e) {
+                console.error('Google login error:', e);
+                showGooglePopup();
+            }
         }
 
         // Microsoft Sign-In
         function initializeMicrosoftSignIn() {
             document.getElementById('microsoftLoginBtn').addEventListener('click', () => {
-                // Simplified Microsoft OAuth flow - requires backend setup
-                // For now, we'll use a prompt for demo purposes
-                const email = prompt('Enter your Microsoft email:');
+                const email = prompt('Enter your Microsoft/Outlook email address:');
                 if (email && email.includes('@')) {
                     loginUser({
                         email: email,
