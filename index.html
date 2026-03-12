@@ -485,8 +485,9 @@
         <div class="login-container">
             <h2>⚡ LOGIN ⚡</h2>
             <div class="login-buttons">
-                <button class="login-btn" id="googleLoginBtn">🔵 Login with Google</button>
-                <button class="login-btn" id="microsoftLoginBtn">🟦 Login with Microsoft</button>
+                <label class="settings-label">Enter Your Email:</label>
+                <input type="email" id="loginEmail" class="settings-input" placeholder="your@email.com" autofocus>
+                <button class="login-btn" onclick="quickLogin()">LOGIN</button>
             </div>
         </div>
     </div>
@@ -643,8 +644,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             checkBlockedStatus();
             checkLoginStatus();
-            initializeGoogleSignIn();
-            initializeMicrosoftSignIn();
+            setupEmailLogin();
         });
 
         // Check if user is blocked
@@ -674,80 +674,49 @@
             }
         }
 
-        // Google Sign-In
-        function initializeGoogleSignIn() {
-            document.getElementById('googleLoginBtn').addEventListener('click', () => {
-                if (typeof google !== 'undefined' && google.accounts) {
-                    try {
-                        google.accounts.id.initialize({
-                            client_id: '764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com',
-                            callback: handleGoogleLogin,
-                            auto_select: false,
-                            cancel_on_tap_outside: true
-                        });
-                        google.accounts.id.prompt((notification) => {
-                            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                                // If prompt fails, show one-tap
-                                showGooglePopup();
-                            }
-                        });
-                    } catch (e) {
-                        showGooglePopup();
-                    }
-                } else {
-                    showGooglePopup();
-                }
+        // Quick Email Login
+        function quickLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            
+            if (!email || !email.includes('@')) {
+                alert('❌ Please enter a valid email address');
+                return;
+            }
+            
+            loginUser({
+                email: email,
+                name: email.split('@')[0],
+                picture: 'https://via.placeholder.com/150',
+                provider: 'email'
             });
         }
 
-        function showGooglePopup() {
-            // Fallback: prompt for email and allow manual login
-            const email = prompt('Enter your Gmail email address:');
-            if (email && email.includes('@')) {
-                loginUser({
-                    email: email,
-                    name: email.split('@')[0],
-                    picture: 'https://via.placeholder.com/150',
-                    provider: 'google'
+        // Setup email input listener
+        function setupEmailLogin() {
+            const emailInput = document.getElementById('loginEmail');
+            if (emailInput) {
+                emailInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') quickLogin();
                 });
             }
         }
 
+        // Google Sign-In
+        function initializeGoogleSignIn() {
+            // Placeholder - uses fallback to email
+        }
+
+        function showGooglePopup() {
+            // Placeholder
+        }
+
         function handleGoogleLogin(response) {
-            try {
-                const token = response.credential;
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                
-                const userData = JSON.parse(jsonPayload);
-                loginUser({
-                    email: userData.email,
-                    name: userData.name,
-                    picture: userData.picture,
-                    provider: 'google'
-                });
-            } catch (e) {
-                console.error('Google login error:', e);
-                showGooglePopup();
-            }
+            // Placeholder
         }
 
         // Microsoft Sign-In
         function initializeMicrosoftSignIn() {
-            document.getElementById('microsoftLoginBtn').addEventListener('click', () => {
-                const email = prompt('Enter your Microsoft/Outlook email address:');
-                if (email && email.includes('@')) {
-                    loginUser({
-                        email: email,
-                        name: email.split('@')[0],
-                        picture: 'https://via.placeholder.com/150',
-                        provider: 'microsoft'
-                    });
-                }
-            });
+            // Placeholder - uses email login instead
         }
 
         // Save user to localStorage
