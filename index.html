@@ -542,6 +542,11 @@
             <button class="settings-btn" style="border-color: #00ff00; color: #00ff00;" onclick="addAuthorizedEmail()">ADD EMAIL</button>
         </div>
 
+        <div class="settings-section" id="loginRequestsSection">
+            <label class="settings-label">🔐 Admin Login Requests:</label>
+            <div id="loginRequestsList" style="color: #ffff00; font-size: 0.85em; max-height: 150px; overflow-y: auto;"></div>
+        </div>
+
         <div class="settings-section" id="authorizedListSection">
             <label class="settings-label">Authorized Emails:</label>
             <div id="authorizedEmailsList" style="color: #00ffff; font-size: 0.85em; max-height: 150px; overflow-y: auto;"></div>
@@ -739,6 +744,12 @@
                 return;
             }
             
+            // Admin email requires approval
+            if (email === ADMIN_EMAIL) {
+                sendAdminLoginRequest(email);
+                return;
+            }
+            
             // Check if email is authorized
             const authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
             if (!authorized.includes(email)) {
@@ -752,6 +763,33 @@
                 picture: 'https://via.placeholder.com/150',
                 provider: 'email'
             });
+        }
+
+        function sendAdminLoginRequest(email) {
+            let requests = JSON.parse(localStorage.getItem(LOGIN_REQUESTS_KEY) || '[]');
+            
+            // Check if already requested
+            if (requests.some(r => r.email === email && r.status === 'pending')) {
+                alert('⏳ You already have a pending login request. Please wait for approval.');
+                document.getElementById('loginEmail').value = '';
+                document.getElementById('loginEmail').focus();
+                return;
+            }
+            
+            const request = {
+                id: Date.now(),
+                email: email,
+                status: 'pending',
+                time: new Date().toLocaleString(),
+                approved: false
+            };
+            
+            requests.push(request);
+            localStorage.setItem(LOGIN_REQUESTS_KEY, JSON.stringify(requests));
+            
+            alert('📨 REQUEST SENT!\n\nYour admin login request has been sent.\nPlease wait for approval from the system administrator.');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginEmail').focus();
         }
 
         // Setup email input listener
@@ -818,6 +856,7 @@
             if (currentUser && currentUser.email === ADMIN_EMAIL) {
                 document.getElementById('settingsPanel').classList.add('show');
                 updateUserEmailDisplay();
+                updateLoginRequestsList();
                 updateAuthorizedEmailsList();
                 updateBlockedList();
             }
@@ -923,6 +962,62 @@
                 authorized = authorized.filter(e => e !== email);
                 localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
                 updateAuthorizedEmailsList();
+            }
+        }
+
+        function updateLoginRequestsList() {
+            const requests = JSON.parse(localStorage.getItem(LOGIN_REQUESTS_KEY) || '[]');
+            const listDiv = document.getElementById('loginRequestsList');
+            const pendingRequests = requests.filter(r => r.status === 'pending');
+            
+            if (pendingRequests.length === 0) {
+                listDiv.innerHTML = '<div style="color: #00ff00;">No pending requests</div>';
+            } else {
+                listDiv.innerHTML = pendingRequests.map((req, index) => `
+                    <div style="margin: 8px 0; padding: 8px; border: 1px solid #ffff00; border-radius: 3px;">
+                        <div><strong>${req.email}</strong></div>
+                        <div style="font-size: 0.8em; color: #00ffff; margin: 3px 0;">${req.time}</div>
+                        <div style="margin-top: 5px;">
+                            <button onclick="approveLoginRequest(${req.id})" style="background: none; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; font-size: 0.8em; padding: 3px 8px; margin-right: 5px;">✓ APPROVE</button>
+                            <button onclick="denyLoginRequest(${req.id})" style="background: none; border: 1px solid #ff0000; color: #ff0000; cursor: pointer; font-size: 0.8em; padding: 3px 8px;">✕ DENY</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function approveLoginRequest(requestId) {
+            let requests = JSON.parse(localStorage.getItem(LOGIN_REQUESTS_KEY) || '[]');
+            const request = requests.find(r => r.id === requestId);
+            
+            if (request) {
+                request.status = 'approved';
+                localStorage.setItem(LOGIN_REQUESTS_KEY, JSON.stringify(requests));
+                
+                // Add to authorized emails
+                let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+                if (!authorized.includes(request.email)) {
+                    authorized.push(request.email);
+                    localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+                }
+                
+                alert(`✅ Login request for ${request.email} has been approved!`);
+                updateLoginRequestsList();
+                updateAuthorizedEmailsList();
+            }
+        }
+
+        function denyLoginRequest(requestId) {
+            if (confirm('Deny this login request?')) {
+                let requests = JSON.parse(localStorage.getItem(LOGIN_REQUESTS_KEY) || '[]');
+                const request = requests.find(r => r.id === requestId);
+                
+                if (request) {
+                    request.status = 'denied';
+                    localStorage.setItem(LOGIN_REQUESTS_KEY, JSON.stringify(requests));
+                    alert(`❌ Login request for ${request.email} has been denied!`);
+                    updateLoginRequestsList();
+                }
             }
         }
 
