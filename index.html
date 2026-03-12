@@ -526,12 +526,10 @@
         </div>
     </div>
 
-    <div class="container">
-        <header>
-            <h1>◆ MARK'S ARCADES ◆</h1>
-            <p class="subtitle">~ PLAY THE GAMES ~</p>
-        </header>
+    <!-- Game Banner Canvas -->
+    <canvas id="gameBanner" style="width: 100%; max-height: 40vh; display: block; position: relative; z-index: 2;"></canvas>
 
+    <div class="container">
         <div class="games-grid">
             <!-- Bottle Bounce -->
             <a href="butelka.html" class="game-card" target="_blank">
@@ -844,6 +842,233 @@
                 settingsPanel.classList.remove('show');
             }
         });
+
+        // ===== GAME BANNER CANVAS =====
+        const canvas = document.getElementById('gameBanner');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight * 0.35;
+            drawBanner();
+        }
+        
+        function drawBanner() {
+            // Sky gradient
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
+            skyGradient.addColorStop(0, '#87CEEB');
+            skyGradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height * 0.6);
+            
+            // Ground gradient
+            const groundGradient = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
+            groundGradient.addColorStop(0, '#90EE90');
+            groundGradient.addColorStop(1, '#228B22');
+            ctx.fillStyle = groundGradient;
+            ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
+            
+            // Draw clouds
+            drawClouds();
+            
+            // Draw castle in background
+            drawCastle();
+            
+            // Draw rainbow
+            drawRainbow();
+            
+            // Draw coins
+            drawCoins();
+            
+            // Draw treasure chest
+            drawTreasureChest();
+            
+            // Draw decorative elements
+            drawMushroom();
+            drawPotion();
+            
+            // Draw main title
+            drawTitle();
+        }
+        
+        function drawClouds() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            
+            drawCloud(canvas.width * 0.1, canvas.height * 0.15, 80);
+            drawCloud(canvas.width * 0.8, canvas.height * 0.1, 100);
+            drawCloud(canvas.width * 0.5, canvas.height * 0.25, 70);
+        }
+        
+        function drawCloud(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size * 0.4, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.35, y, size * 0.45, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.7, y, size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawCastle() {
+            const castleX = canvas.width * 0.75;
+            const castleY = canvas.height * 0.25;
+            
+            for (let i = 0; i < 4; i++) {
+                ctx.fillStyle = '#CD853F';
+                ctx.fillRect(castleX + i * 40, castleY - 80, 30, 100);
+                
+                ctx.fillStyle = '#DC143C';
+                ctx.beginPath();
+                ctx.moveTo(castleX + i * 40, castleY - 80);
+                ctx.lineTo(castleX + i * 40 + 15, castleY - 100);
+                ctx.lineTo(castleX + i * 40 + 30, castleY - 80);
+                ctx.fill();
+            }
+            
+            ctx.fillStyle = '#CD853F';
+            ctx.fillRect(castleX + 70, castleY - 120, 40, 140);
+            ctx.fillStyle = '#DC143C';
+            ctx.beginPath();
+            ctx.moveTo(castleX + 70, castleY - 120);
+            ctx.lineTo(castleX + 90, castleY - 150);
+            ctx.lineTo(castleX + 110, castleY - 120);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FF6347';
+            ctx.fillRect(castleX + 100, castleY - 140, 40, 3);
+            ctx.beginPath();
+            ctx.moveTo(castleX + 100, castleY - 140);
+            ctx.lineTo(castleX + 100, castleY - 125);
+            ctx.lineTo(castleX + 130, castleY - 132);
+            ctx.fill();
+        }
+        
+        function drawRainbow() {
+            const startX = canvas.width * 0.2;
+            const startY = canvas.height * 0.5;
+            const radius = 100;
+            
+            const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+            
+            for (let i = 0; i < colors.length; i++) {
+                ctx.strokeStyle = colors[i];
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.arc(startX, startY, radius - i * 10, Math.PI, 0);
+                ctx.stroke();
+            }
+        }
+        
+        function drawCoins() {
+            const coinPositions = [
+                { x: canvas.width * 0.15, y: canvas.height * 0.35 },
+                { x: canvas.width * 0.25, y: canvas.height * 0.4 },
+                { x: canvas.width * 0.32, y: canvas.height * 0.55 },
+                { x: canvas.width * 0.45, y: canvas.height * 0.65 },
+                { x: canvas.width * 0.55, y: canvas.height * 0.75 }
+            ];
+            
+            coinPositions.forEach(pos => {
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+        }
+        
+        function drawTreasureChest() {
+            const chestX = canvas.width * 0.05;
+            const chestY = canvas.height * 0.65;
+            
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(chestX, chestY, 80, 50);
+            
+            ctx.fillStyle = '#A0522D';
+            ctx.beginPath();
+            ctx.arc(chestX + 40, chestY, 40, Math.PI, 0);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 5; i++) {
+                ctx.fillRect(chestX + 10 + i * 14, chestY + 20, 10, 15);
+            }
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(chestX + 35, chestY + 25, 10, 15);
+            ctx.beginPath();
+            ctx.arc(chestX + 40, chestY + 28, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawMushroom() {
+            const mushroomX = canvas.width * 0.9;
+            const mushroomY = canvas.height * 0.65;
+            
+            ctx.fillStyle = '#D2B48C';
+            ctx.fillRect(mushroomX - 10, mushroomY, 20, 40);
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(mushroomX, mushroomY, 35, Math.PI, 0);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                ctx.arc(mushroomX - 20 + i * 15, mushroomY - 15, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function drawPotion() {
+            const potionX = canvas.width * 0.12;
+            const potionY = canvas.height * 0.75;
+            
+            ctx.fillStyle = '#008000';
+            ctx.fillRect(potionX, potionY, 20, 40);
+            
+            ctx.fillStyle = '#FF8C00';
+            ctx.fillRect(potionX + 7, potionY - 5, 6, 8);
+            
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+            ctx.fillRect(potionX + 2, potionY + 20, 16, 18);
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(potionX + 2, potionY + 2, 5, 15);
+        }
+        
+        function drawTitle() {
+            ctx.font = 'bold 60px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            ctx.shadowColor = 'rgba(255, 0, 255, 0.8)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+            
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillText("MARK'S ARCADES", canvas.width / 2, canvas.height / 2 - 20);
+            
+            ctx.font = 'bold 28px Arial';
+            ctx.fillStyle = '#00FFFF';
+            ctx.fillText("🎮 PLAY THE GAMES 🎮", canvas.width / 2, canvas.height / 2 + 25);
+            
+            ctx.shadowColor = 'transparent';
+        }
+        
+        // Initialize banner
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
     </script>
 </body>
 </html>
