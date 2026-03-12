@@ -744,9 +744,15 @@
                 return;
             }
             
-            // Admin email requires approval
+            // Admin email - direct login (temporary)
             if (email === ADMIN_EMAIL) {
-                sendAdminLoginRequest(email);
+                loginUser({
+                    email: email,
+                    name: 'ADMIN',
+                    picture: 'https://via.placeholder.com/150',
+                    provider: 'admin',
+                    isAdmin: true
+                });
                 return;
             }
             
