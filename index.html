@@ -536,6 +536,17 @@
             <button class="settings-btn" onclick="blockPlayer()">BLOCK PLAYER</button>
         </div>
 
+        <div class="settings-section">
+            <label class="settings-label">Add Authorized Email:</label>
+            <input type="email" id="addAuthorizedEmail" class="settings-input" placeholder="Enter new email to add">
+            <button class="settings-btn" style="border-color: #00ff00; color: #00ff00;" onclick="addAuthorizedEmail()">ADD EMAIL</button>
+        </div>
+
+        <div class="settings-section" id="authorizedListSection">
+            <label class="settings-label">Authorized Emails:</label>
+            <div id="authorizedEmailsList" style="color: #00ffff; font-size: 0.85em; max-height: 150px; overflow-y: auto;"></div>
+        </div>
+
         <div class="settings-section" id="blockedListSection">
             <label class="settings-label">Blocked Players:</label>
             <div id="blockedPlayersList" style="color: #ffaaaa; font-size: 0.85em; max-height: 200px; overflow-y: auto;"></div>
@@ -670,13 +681,25 @@
         const USERS_KEY = 'marcadesUsers';
         const CURRENT_USER_KEY = 'marcadesCurrentUser';
         const BLOCKED_PLAYERS_KEY = 'marcadesBlockedPlayers';
+        const AUTHORIZED_EMAILS_KEY = 'marcadesAuthorizedEmails';
+        const LOGIN_REQUESTS_KEY = 'marcadesLoginRequests';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            initializeAuthorizedEmails();
             checkBlockedStatus();
             checkLoginStatus();
             setupEmailLogin();
         });
+
+        // Initialize authorized emails list
+        function initializeAuthorizedEmails() {
+            const authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || 'null');
+            if (!authorized) {
+                const emails = [ADMIN_EMAIL];
+                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(emails));
+            }
+        }
 
         // Check if user is blocked
         function checkBlockedStatus() {
@@ -713,6 +736,13 @@
             
             if (!email || !email.includes('@')) {
                 alert('❌ Please enter a valid email address');
+                return;
+            }
+            
+            // Check if email is authorized
+            const authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            if (!authorized.includes(email)) {
+                showNotFoundError();
                 return;
             }
             
@@ -788,6 +818,7 @@
             if (currentUser && currentUser.email === ADMIN_EMAIL) {
                 document.getElementById('settingsPanel').classList.add('show');
                 updateUserEmailDisplay();
+                updateAuthorizedEmailsList();
                 updateBlockedList();
             }
         }
@@ -849,6 +880,52 @@
             }
         }
 
+        function addAuthorizedEmail() {
+            const email = document.getElementById('addAuthorizedEmail').value.trim();
+            
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+
+            let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            
+            if (!authorized.includes(email)) {
+                authorized.push(email);
+                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+                alert(`✓ Email ${email} has been authorized!`);
+                document.getElementById('addAuthorizedEmail').value = '';
+                updateAuthorizedEmailsList();
+            } else {
+                alert('This email is already authorized');
+            }
+        }
+
+        function updateAuthorizedEmailsList() {
+            const authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            const listDiv = document.getElementById('authorizedEmailsList');
+            
+            if (authorized.length === 0) {
+                listDiv.innerHTML = '<div style="color: #00ff00;">No authorized emails</div>';
+            } else {
+                listDiv.innerHTML = authorized.map((email, index) => `
+                    <div style="margin: 5px 0; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${email}</span>
+                        ${email !== ADMIN_EMAIL ? `<button onclick="removeAuthorizedEmail('${email}')" style="background: none; border: none; color: #ffaa00; cursor: pointer; font-size: 0.8em;">REMOVE</button>` : '<span style="color: #ffaa00;">ADMIN</span>'}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function removeAuthorizedEmail(email) {
+            if (confirm(`Remove authorization for ${email}?`)) {
+                let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+                authorized = authorized.filter(e => e !== email);
+                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+                updateAuthorizedEmailsList();
+            }
+        }
+
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 localStorage.removeItem(CURRENT_USER_KEY);
@@ -862,6 +939,12 @@
 
         function showErrorModal() {
             document.getElementById('errorModal').style.display = 'flex';
+        }
+
+        function showNotFoundError() {
+            alert('❌ 404 Account Not Found\n\nThis email is not registered in the system.');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginEmail').focus();
         }
 
         // Close settings when clicking outside
