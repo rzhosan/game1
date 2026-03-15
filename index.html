@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mark's Arcades</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqrcode/0.0.1/jsqrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.2/dist/otpauth.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>    <style>
         * {
             margin: 0;
             padding: 0;
@@ -547,6 +548,12 @@
             <div id="loginRequestsList" style="color: #ffff00; font-size: 0.85em; max-height: 150px; overflow-y: auto;"></div>
         </div>
 
+        <div class="settings-section" id="twoFASection">
+            <label class="settings-label">🔐 Two-Factor Authentication:</label>
+            <div id="twoFAStatus" style="color: #ffff00; margin-bottom: 10px; font-size: 0.9em;"></div>
+            <button class="settings-btn" style="border-color: #00ff00; color: #00ff00;" onclick="manageTwoFA()" id="twoFABtn">SETUP 2FA</button>
+        </div>
+
         <div class="settings-section" id="authorizedListSection">
             <label class="settings-label">Authorized Emails:</label>
             <div id="authorizedEmailsList" style="color: #00ffff; font-size: 0.85em; max-height: 150px; overflow-y: auto;"></div>
@@ -571,6 +578,41 @@
         <div class="error-container">
             <h2>❌ ACCESS DENIED</h2>
             <p>Your account has been blocked.<br>Contact administrator for more information.</p>
+        </div>
+    </div>
+
+    <!-- 2FA VERIFICATION MODAL -->
+    <div id="twoFAModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #0a0e27; border: 2px solid #00ff00; border-radius: 15px; padding: 40px; text-align: center; max-width: 400px; color: #00ff00;">
+            <h2 style="margin-top: 0; font-size: 24px;">🔐 2FA Verification</h2>
+            <p style="color: #ffff00; margin: 20px 0;">Enter the 6-digit code from your Authenticator app:</p>
+            <input id="twoFACode" type="text" maxlength="6" placeholder="000000" style="width: 100%; padding: 15px; font-size: 18px; text-align: center; letter-spacing: 5px; background: #1a1f3a; border: 2px solid #00ff00; color: #00ff00; border-radius: 8px; font-family: monospace; box-sizing: border-box;" />
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="verify2FA()" style="flex: 1; padding: 12px; background: #00ff00; color: #0a0e27; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">✓ VERIFY</button>
+                <button onclick="cancel2FA()" style="flex: 1; padding: 12px; background: #ff6b6b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">✕ CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2FA SETUP MODAL -->
+    <div id="setupTwoFAModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 10000; overflow-y: auto; padding: 20px 0;">
+        <div style="background: #0a0e27; border: 2px solid #00ff00; border-radius: 15px; padding: 40px; max-width: 500px; margin: 50px auto; color: #00ff00;">
+            <h2 style="margin-top: 0; font-size: 24px;">🔐 Setup 2FA Authentication</h2>
+            <p style="color: #ffff00;">1. Download an authenticator app:</p>
+            <div style="background: #1a1f3a; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 13px; color: #00ff00;">
+                • Google Authenticator<br/>
+                • Microsoft Authenticator<br/>
+                • Authy<br/>
+                • FreeOTP
+            </div>
+            <p style="color: #ffff00; margin-top: 20px;">2. Scan this QR code:</p>
+            <div id="qrCodeContainer" style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 15px 0; min-height: 300px;"></div>
+            <p style="color: #ffff00; margin-top: 20px;">3. Enter the 6-digit code to confirm:</p>
+            <input id="setupTwoFACode" type="text" maxlength="6" placeholder="000000" style="width: 100%; padding: 12px; font-size: 18px; text-align: center; letter-spacing: 5px; background: #1a1f3a; border: 2px solid #00ff00; color: #00ff00; border-radius: 8px; font-family: monospace; box-sizing: border-box;" />
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="confirmTwoFASetup()" style="flex: 1; padding: 12px; background: #00ff00; color: #0a0e27; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">✓ CONFIRM</button>
+                <button onclick="cancelTwoFASetup()" style="flex: 1; padding: 12px; background: #ff6b6b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">✕ CANCEL</button>
+            </div>
         </div>
     </div>
 
@@ -688,6 +730,8 @@
         const BLOCKED_PLAYERS_KEY = 'marcadesBlockedPlayers';
         const AUTHORIZED_EMAILS_KEY = 'marcadesAuthorizedEmails';
         const LOGIN_REQUESTS_KEY = 'marcadesLoginRequests';
+        const TWO_FA_SECRET_KEY = 'marcadesTwoFASecret';
+        const TWO_FA_ENABLED_KEY = 'marcadesTwoFAEnabled';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -744,15 +788,16 @@
                 return;
             }
             
-            // Admin email - direct login (temporary)
+            // Admin email - requires 2FA
             if (email === ADMIN_EMAIL) {
-                loginUser({
-                    email: email,
-                    name: 'ADMIN',
-                    picture: 'https://via.placeholder.com/150',
-                    provider: 'admin',
-                    isAdmin: true
-                });
+                const twoFAEnabled = localStorage.getItem(TWO_FA_ENABLED_KEY) === 'true';
+                if (!twoFAEnabled) {
+                    // First time - setup 2FA
+                    setupTwoFA();
+                } else {
+                    // Verify 2FA code
+                    showTwoFAModal(email);
+                }
                 return;
             }
             
@@ -769,6 +814,194 @@
                 picture: 'https://via.placeholder.com/150',
                 provider: 'email'
             });
+        }
+
+        // Generate TOTP secret
+        function generateTOTPSecret() {
+            return OTPAuth.Secret.fromLength(32).base32;
+        }
+
+        // Verify TOTP code
+        function verifyTOTPCode(secret, code) {
+            try {
+                const totp = new OTPAuth.TOTP({
+                    issuer: 'Marcades Arcade',
+                    label: ADMIN_EMAIL,
+                    algorithm: 'SHA1',
+                    digits: 6,
+                    period: 30,
+                    secret: OTPAuth.Secret.fromBase32(secret)
+                });
+                
+                return totp.validate({
+                    token: code,
+                    window: 1
+                }) !== null;
+            } catch (e) {
+                console.error('TOTP verification error:', e);
+                return false;
+            }
+        }
+
+        // Setup 2FA for admin
+        function setupTwoFA() {
+            const secret = generateTOTPSecret();
+            window.pendingTwoFASecret = secret;
+            
+            try {
+                const totp = new OTPAuth.TOTP({
+                    issuer: 'Marcades Arcade',
+                    label: ADMIN_EMAIL,
+                    algorithm: 'SHA1',
+                    digits: 6,
+                    period: 30,
+                    secret: OTPAuth.Secret.fromBase32(secret)
+                });
+                
+                const qrUri = totp.toString();
+                
+                // Generate QR code
+                const qrContainer = document.getElementById('qrCodeContainer');
+                qrContainer.innerHTML = '';
+                
+                // Use QRCode library with new QRCode() constructor
+                new QRCode(qrContainer, {
+                    text: qrUri,
+                    width: 300,
+                    height: 300,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                document.getElementById('setupTwoFAModal').style.display = 'flex';
+                document.getElementById('setupTwoFACode').focus();
+            } catch (e) {
+                console.error('2FA setup error:', e);
+                alert('❌ Error setting up 2FA. Using fallback...');
+                const setupModal = document.getElementById('setupTwoFAModal');
+                const secret2 = window.pendingTwoFASecret || generateTOTPSecret();
+                window.pendingTwoFASecret = secret2;
+                
+                setupModal.innerHTML = `
+                    <div style="background: #0a0e27; border: 2px solid #00ff00; border-radius: 15px; padding: 40px; max-width: 500px; margin: 50px auto; color: #00ff00;">
+                        <h2 style="margin-top: 0; font-size: 24px;">🔐 Secret Key (Manual Entry)</h2>
+                        <p style="color: #ffff00; background: #1a1f3a; padding: 15px; border-radius: 8px; font-family: monospace; word-break: break-all; margin: 15px 0;">
+                            ${secret2}
+                        </p>
+                        <p style="color: #cccccc; font-size: 12px; margin: 15px 0;">Copy this key to your Authenticator app manually</p>
+                        <p style="color: #ffff00; margin-top: 30px;">Enter the 6-digit code to confirm:</p>
+                        <input id="setupTwoFACode" type="text" maxlength="6" placeholder="000000" style="width: 100%; padding: 12px; font-size: 18px; text-align: center; letter-spacing: 5px; background: #1a1f3a; border: 2px solid #00ff00; color: #00ff00; border-radius: 8px; font-family: monospace; box-sizing: border-box; margin-bottom: 20px;" />
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="confirmTwoFASetup()" style="flex: 1; padding: 12px; background: #00ff00; color: #0a0e27; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✓ CONFIRM</button>
+                            <button onclick="cancelTwoFASetup()" style="flex: 1; padding: 12px; background: #ff6b6b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ CANCEL</button>
+                        </div>
+                    </div>
+                `;
+                setupModal.style.display = 'flex';
+                setTimeout(() => document.getElementById('setupTwoFACode').focus(), 100);
+            }
+        }
+
+        // Show 2FA verification modal
+        function showTwoFAModal(email) {
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('twoFACode').value = '';
+            document.getElementById('twoFAModal').style.display = 'flex';
+            document.getElementById('twoFACode').focus();
+            window.pendingAdminEmail = email;
+        }
+
+        // Verify 2FA code
+        function verify2FA() {
+            const code = document.getElementById('twoFACode').value.trim();
+            
+            if (code.length !== 6 || !/^\d+$/.test(code)) {
+                alert('❌ Please enter a valid 6-digit code');
+                return;
+            }
+            
+            const secret = localStorage.getItem(TWO_FA_SECRET_KEY);
+            
+            if (verifyTOTPCode(secret, code)) {
+                document.getElementById('twoFAModal').style.display = 'none';
+                loginUser({
+                    email: window.pendingAdminEmail,
+                    name: 'ADMIN',
+                    picture: 'https://via.placeholder.com/150',
+                    provider: 'admin',
+                    isAdmin: true
+                });
+            } else {
+                alert('❌ Invalid code. Please try again.');
+                document.getElementById('twoFACode').value = '';
+                document.getElementById('twoFACode').focus();
+            }
+        }
+
+        // Cancel 2FA verification
+        function cancel2FA() {
+            document.getElementById('twoFAModal').style.display = 'none';
+            document.getElementById('twoFACode').value = '';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginEmail').focus();
+        }
+
+        // Confirm 2FA setup
+        function confirmTwoFASetup() {
+            const code = document.getElementById('setupTwoFACode').value.trim();
+            
+            if (code.length !== 6 || !/^\d+$/.test(code)) {
+                alert('❌ Please enter a valid 6-digit code');
+                return;
+            }
+            
+            const secret = window.pendingTwoFASecret;
+            
+            if (verifyTOTPCode(secret, code)) {
+                localStorage.setItem(TWO_FA_SECRET_KEY, secret);
+                localStorage.setItem(TWO_FA_ENABLED_KEY, 'true');
+                
+                console.log('%c✅ 2FA SETUP COMPLETE!', 'color: #00ff00; font-size: 14px; font-weight: bold;');
+                console.log('Secret stored in localStorage');
+                
+                document.getElementById('setupTwoFAModal').style.display = 'none';
+                alert('✅ 2FA setup complete! Your authenticator is now active.');
+                document.getElementById('loginEmail').value = '';
+                document.getElementById('loginEmail').focus();
+            } else {
+                alert('❌ Invalid code. Setup failed. Please try again.');
+                document.getElementById('setupTwoFACode').value = '';
+                document.getElementById('setupTwoFACode').focus();
+            }
+        }
+
+        // Cancel 2FA setup
+        function cancelTwoFASetup() {
+            document.getElementById('setupTwoFAModal').style.display = 'none';
+            document.getElementById('setupTwoFACode').value = '';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginEmail').focus();
+        }
+
+        // Update 2FA status in settings
+        function updateTwoFAStatus() {
+            const twoFAEnabled = localStorage.getItem(TWO_FA_ENABLED_KEY) === 'true';
+            const statusDiv = document.getElementById('twoFAStatus');
+            const btn = document.getElementById('twoFABtn');
+            
+            if (twoFAEnabled) {
+                statusDiv.innerHTML = '✅ 2FA is <span style="color: #00ff00;">ACTIVE</span>';
+                btn.textContent = '🔄 CHANGE 2FA';
+            } else {
+                statusDiv.innerHTML = '❌ 2FA is <span style="color: #ffaaaa;">INACTIVE</span>';
+                btn.textContent = 'SETUP 2FA';
+            }
+        }
+
+        // Manage 2FA setup/change
+        function manageTwoFA() {
+            setupTwoFA();
         }
 
         function sendAdminLoginRequest(email) {
@@ -901,6 +1134,7 @@
                 updateLoginRequestsList();
                 updateAuthorizedEmailsList();
                 updateBlockedList();
+                updateTwoFAStatus();
             }
         }
 
