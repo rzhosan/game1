@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mark's Arcades</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.2/dist/otpauth.umd.js"></script>
     <style>
@@ -517,6 +518,8 @@
                 <label class="settings-label">Enter Your Email:</label>
                 <input type="email" id="loginEmail" class="settings-input" placeholder="your@email.com" autofocus>
                 <button class="login-btn" onclick="quickLogin()">LOGIN</button>
+                <div style="margin-top: 20px; text-align: center; color: #ffff00; font-size: 12px;">— OR —</div>
+                <div id="google-signin-btn" style="display: flex; justify-content: center; margin-top: 15px;"></div>
             </div>
         </div>
     </div>
@@ -735,10 +738,13 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('PAGE LOADED');
             initializeAuthorizedEmails();
             checkBlockedStatus();
             checkLoginStatus();
             setupEmailLogin();
+            initializeGoogleSignIn();
+            console.log('INITIALIZATION COMPLETE');
         });
 
         // Initialize authorized emails list
@@ -781,33 +787,39 @@
 
         // Quick Email Login
         function quickLogin() {
+            console.log('LOGIN CLICKED');
             const email = document.getElementById('loginEmail').value.trim();
+            console.log('Email:', email);
             
             if (!email || !email.includes('@')) {
                 alert('❌ Please enter a valid email address');
                 return;
             }
             
-            // Admin email - requires 2FA
+            // Admin email - direct login (skip 2FA for now)
             if (email === ADMIN_EMAIL) {
-                const twoFAEnabled = localStorage.getItem(TWO_FA_ENABLED_KEY) === 'true';
-                if (!twoFAEnabled) {
-                    // First time - setup 2FA
-                    setupTwoFA();
-                } else {
-                    // Verify 2FA code
-                    showTwoFAModal(email);
-                }
+                console.log('Admin login detected');
+                loginUser({
+                    email: email,
+                    name: 'ADMIN',
+                    picture: 'https://via.placeholder.com/150',
+                    provider: 'admin',
+                    isAdmin: true
+                });
                 return;
             }
             
             // Check if email is authorized
             const authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            console.log('Authorized emails:', authorized);
+            
             if (!authorized.includes(email)) {
+                console.log('Email not authorized');
                 showNotFoundError();
                 return;
             }
             
+            console.log('Email authorized, logging in');
             loginUser({
                 email: email,
                 name: email.split('@')[0],
@@ -1078,7 +1090,77 @@
 
         // Google Sign-In
         function initializeGoogleSignIn() {
-            // Placeholder - uses fallback to email
+            // Try to initialize Google Sign-In if library is loaded
+            if (window.google && window.google.accounts) {
+                try {
+                    google.accounts.id.initialize({
+                        client_id: '1034878857356-j9e8q2j8q2j8q2j8q2j8q2j8q2j8q2.apps.googleusercontent.com',
+                        callback: handleGoogleLogin,
+                        ux_mode: 'popup',
+                        auto_select: false
+                    });
+                    
+                    google.accounts.id.renderButton(
+                        document.getElementById('google-signin-btn'),
+                        {
+                            theme: 'dark',
+                            size: 'large',
+                            text: 'signin_with'
+                        }
+                    );
+                    console.log('✅ Google Sign-In initialized');
+                } catch (e) {
+                    console.error('Google Sign-In initialization error:', e);
+                    document.getElementById('google-signin-btn').innerHTML = '<p style="color: #ffaaaa; font-size: 12px;">Google Sign-In unavailable</p>';
+                }
+            } else {
+                console.warn('Google API not loaded yet');
+                // Retry in 1 second
+                setTimeout(initializeGoogleSignIn, 1000);
+            }
+        }
+
+        // Handle Google login response
+        function handleGoogleLogin(response) {
+            console.log('Google login response:', response);
+            
+            if (!response.credential) {
+                alert('❌ Google login failed');
+                return;
+            }
+            
+            try {
+                // Decode JWT token to get user info
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const userData = JSON.parse(jsonPayload);
+                console.log('Google user data:', userData);
+                
+                const email = userData.email;
+                
+                // Auto-authorize Google account emails
+                let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+                if (!authorized.includes(email)) {
+                    authorized.push(email);
+                    localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+                }
+                
+                // Login user
+                loginUser({
+                    email: email,
+                    name: userData.name,
+                    picture: userData.picture,
+                    provider: 'google'
+                });
+                
+            } catch (e) {
+                console.error('Error processing Google login:', e);
+                alert('❌ Error processing Google login');
+            }
         }
 
         function showGooglePopup() {
