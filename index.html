@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mark's Arcades</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.2/dist/otpauth.umd.js"></script>
     <style>
@@ -514,9 +515,8 @@
         <div class="login-container">
             <h2>⚡ LOGIN ⚡</h2>
             <div class="login-buttons">
-                <label class="settings-label">Sign in:</label>
-                <button onclick="loginWithTestAccount()" class="login-btn" style="background: #1f6feb; border-color: #1f6feb; margin-bottom: 10px;">🔐 TEST LOGIN</button>
-                <p style="color: #ffff00; font-size: 12px; margin: 10px 0;">Use for testing - auto-login</p>
+                <label class="settings-label">Sign in with Google:</label>
+                <div id="google_signin_button" style="display: flex; justify-content: center; margin-top: 15px;"></div>
             </div>
         </div>
     </div>
@@ -739,6 +739,9 @@
             initializeAuthorizedEmails();
             checkBlockedStatus();
             checkLoginStatus();
+            setTimeout(() => {
+                initializeGoogleSignIn();
+            }, 1000);
             console.log('INITIALIZATION COMPLETE');
         });
 
@@ -1090,35 +1093,66 @@
         }
 
         // Test Login Function (for testing purposes)
-        function loginWithTestAccount() {
-            const testUser = {
-                email: 'test@marcades.local',
-                name: 'Test User',
-                picture: 'https://via.placeholder.com/150',
-                provider: 'test'
-            };
-            
-            // Authorize test email
-            let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
-            if (!authorized.includes(testUser.email)) {
-                authorized.push(testUser.email);
-                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+        // Google Sign-In
+        function initializeGoogleSignIn() {
+            if (!window.google || !window.google.accounts) {
+                console.warn('Google API not loaded');
+                return;
             }
             
-            console.log('✅ Test login');
-            loginUser(testUser);
-        }
-
-        // Google Sign-In (disabled - use test login instead)
-        function initializeGoogleSignIn() {
-            console.log('Google Sign-In disabled - use Test Login instead');
-        }
-
-        function showGooglePopup() {
-            // Placeholder
+            try {
+                google.accounts.id.initialize({
+                    client_id: '1046760765297-u79ier22sufiia5pc1brvbbuaq7193qv.apps.googleusercontent.com',
+                    callback: handleGoogleLogin
+                });
+                
+                google.accounts.id.renderButton(
+                    document.getElementById('google_signin_button'),
+                    { theme: 'dark', size: 'large' }
+                );
+                
+                console.log('✅ Google Sign-In ready');
+            } catch (e) {
+                console.error('Google Sign-In error:', e);
+            }
         }
 
         function handleGoogleLogin(response) {
+            if (!response.credential) {
+                alert('Google login failed');
+                return;
+            }
+            
+            try {
+                // Decode JWT
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                const data = JSON.parse(jsonPayload);
+                
+                // Authorize email
+                let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+                if (!authorized.includes(data.email)) {
+                    authorized.push(data.email);
+                    localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+                }
+                
+                loginUser({
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    provider: 'google'
+                });
+            } catch (e) {
+                console.error('Error:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function showGooglePopup() {
             // Placeholder
         }
 
