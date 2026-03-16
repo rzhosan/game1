@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mark's Arcades</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/otpauth@9.1.2/dist/otpauth.umd.js"></script>
     <style>
@@ -240,7 +239,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 9999;
             backdrop-filter: blur(5px);
         }
 
@@ -515,11 +514,9 @@
         <div class="login-container">
             <h2>⚡ LOGIN ⚡</h2>
             <div class="login-buttons">
-                <label class="settings-label">Enter Your Email:</label>
-                <input type="email" id="loginEmail" class="settings-input" placeholder="your@email.com" autofocus>
-                <button class="login-btn" onclick="quickLogin()">LOGIN</button>
-                <div style="margin-top: 20px; text-align: center; color: #ffff00; font-size: 12px;">— OR —</div>
-                <div id="google-signin-btn" style="display: flex; justify-content: center; margin-top: 15px;"></div>
+                <label class="settings-label">Sign in:</label>
+                <button onclick="loginWithTestAccount()" class="login-btn" style="background: #1f6feb; border-color: #1f6feb; margin-bottom: 10px;">🔐 TEST LOGIN</button>
+                <p style="color: #ffff00; font-size: 12px; margin: 10px 0;">Use for testing - auto-login</p>
             </div>
         </div>
     </div>
@@ -742,8 +739,6 @@
             initializeAuthorizedEmails();
             checkBlockedStatus();
             checkLoginStatus();
-            setupEmailLogin();
-            initializeGoogleSignIn();
             console.log('INITIALIZATION COMPLETE');
         });
 
@@ -772,15 +767,21 @@
         // Check login status
         function checkLoginStatus() {
             const currentUser = JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
+            const container = document.querySelector('.container');
+            const banner = document.getElementById('gameBanner');
             
             if (currentUser) {
                 document.getElementById('loginModal').style.display = 'none';
+                if (container) container.style.display = 'block';
+                if (banner) banner.style.display = 'block';
                 document.getElementById('logoutBtn').classList.add('show');
                 if (currentUser.email === ADMIN_EMAIL) {
                     document.getElementById('settingsBtn').classList.add('show');
                 }
             } else {
                 document.getElementById('loginModal').style.display = 'flex';
+                if (container) container.style.display = 'none';
+                if (banner) banner.style.display = 'none';
                 document.getElementById('logoutBtn').classList.remove('show');
             }
         }
@@ -1088,79 +1089,29 @@
             }
         }
 
-        // Google Sign-In
-        function initializeGoogleSignIn() {
-            // Try to initialize Google Sign-In if library is loaded
-            if (window.google && window.google.accounts) {
-                try {
-                    google.accounts.id.initialize({
-                        client_id: '1046760765297-u79ier22sufiia5pc1brvbbuaq7193qv.apps.googleusercontent.com',
-                        callback: handleGoogleLogin,
-                        ux_mode: 'popup',
-                        auto_select: false
-                    });
-                    
-                    google.accounts.id.renderButton(
-                        document.getElementById('google-signin-btn'),
-                        {
-                            theme: 'dark',
-                            size: 'large',
-                            text: 'signin_with'
-                        }
-                    );
-                    console.log('✅ Google Sign-In initialized');
-                } catch (e) {
-                    console.error('Google Sign-In initialization error:', e);
-                    document.getElementById('google-signin-btn').innerHTML = '<p style="color: #ffaaaa; font-size: 12px;">Google Sign-In unavailable</p>';
-                }
-            } else {
-                console.warn('Google API not loaded yet');
-                // Retry in 1 second
-                setTimeout(initializeGoogleSignIn, 1000);
+        // Test Login Function (for testing purposes)
+        function loginWithTestAccount() {
+            const testUser = {
+                email: 'test@marcades.local',
+                name: 'Test User',
+                picture: 'https://via.placeholder.com/150',
+                provider: 'test'
+            };
+            
+            // Authorize test email
+            let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            if (!authorized.includes(testUser.email)) {
+                authorized.push(testUser.email);
+                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
             }
+            
+            console.log('✅ Test login');
+            loginUser(testUser);
         }
 
-        // Handle Google login response
-        function handleGoogleLogin(response) {
-            console.log('Google login response:', response);
-            
-            if (!response.credential) {
-                alert('❌ Google login failed');
-                return;
-            }
-            
-            try {
-                // Decode JWT token to get user info
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                
-                const userData = JSON.parse(jsonPayload);
-                console.log('Google user data:', userData);
-                
-                const email = userData.email;
-                
-                // Auto-authorize Google account emails
-                let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
-                if (!authorized.includes(email)) {
-                    authorized.push(email);
-                    localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
-                }
-                
-                // Login user
-                loginUser({
-                    email: email,
-                    name: userData.name,
-                    picture: userData.picture,
-                    provider: 'google'
-                });
-                
-            } catch (e) {
-                console.error('Error processing Google login:', e);
-                alert('❌ Error processing Google login');
-            }
+        // Google Sign-In (disabled - use test login instead)
+        function initializeGoogleSignIn() {
+            console.log('Google Sign-In disabled - use Test Login instead');
         }
 
         function showGooglePopup() {
@@ -1197,7 +1148,39 @@
                 localStorage.setItem(USERS_KEY, JSON.stringify(users));
             }
             
-            document.getElementById('loginModal').style.display = 'none';
+            // Hide login modal and show games
+            const loginModal = document.getElementById('loginModal');
+            const container = document.querySelector('.container');
+            const banner = document.getElementById('gameBanner');
+            
+            // Completely hide login modal
+            if (loginModal) {
+                loginModal.style.display = 'none !important';
+                loginModal.style.visibility = 'hidden';
+                loginModal.style.opacity = '0';
+                loginModal.style.pointerEvents = 'none';
+                loginModal.style.zIndex = '-999';
+            }
+            
+            // Show banner
+            if (banner) {
+                banner.style.display = 'block';
+                banner.style.visibility = 'visible';
+                banner.style.opacity = '1';
+                banner.style.zIndex = '2';
+            }
+            
+            // Show container with games
+            if (container) {
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
+                container.style.opacity = '1';
+                container.style.zIndex = '2';
+            }
+            
+            console.log('✅ Login complete - showing games');
+            alert('✅ Welcome ' + userData.name + '!');
+            
             document.getElementById('logoutBtn').classList.add('show');
             
             if (userData.email === ADMIN_EMAIL) {
