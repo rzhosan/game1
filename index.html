@@ -723,8 +723,8 @@
     </div>
 
     <script>
-        // Admin email
-        const ADMIN_EMAIL = 'zhasanmark2@gmail.com';
+        // Admin emails
+        const ADMIN_EMAILS = ['zhasanmark2@gmail.com', 'mark@zhasan.online'];
         const USERS_KEY = 'marcadesUsers';
         const CURRENT_USER_KEY = 'marcadesCurrentUser';
         const BLOCKED_PLAYERS_KEY = 'marcadesBlockedPlayers';
@@ -749,7 +749,7 @@
         function initializeAuthorizedEmails() {
             const authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || 'null');
             if (!authorized) {
-                const emails = [ADMIN_EMAIL];
+                const emails = ADMIN_EMAILS;
                 localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(emails));
             }
         }
@@ -778,7 +778,7 @@
                 if (container) container.style.display = 'block';
                 if (banner) banner.style.display = 'block';
                 document.getElementById('logoutBtn').classList.add('show');
-                if (currentUser.email === ADMIN_EMAIL) {
+                if (ADMIN_EMAILS.includes(currentUser.email)) {
                     document.getElementById('settingsBtn').classList.add('show');
                 }
             } else {
@@ -801,7 +801,7 @@
             }
             
             // Admin email - direct login (skip 2FA for now)
-            if (email === ADMIN_EMAIL) {
+            if (ADMIN_EMAILS.includes(email)) {
                 console.log('Admin login detected');
                 loginUser({
                     email: email,
@@ -842,7 +842,7 @@
             try {
                 const totp = new OTPAuth.TOTP({
                     issuer: 'Marcades Arcade',
-                    label: ADMIN_EMAIL,
+                    label: ADMIN_EMAILS[0],
                     algorithm: 'SHA1',
                     digits: 6,
                     period: 30,
@@ -867,7 +867,7 @@
             try {
                 const totp = new OTPAuth.TOTP({
                     issuer: 'Marcades Arcade',
-                    label: ADMIN_EMAIL,
+                    label: ADMIN_EMAILS[0],
                     algorithm: 'SHA1',
                     digits: 6,
                     period: 30,
@@ -1214,7 +1214,7 @@
             
             document.getElementById('logoutBtn').classList.add('show');
             
-            if (userData.email === ADMIN_EMAIL) {
+            if (userData.email && ADMIN_EMAILS.includes(userData.email)) {
                 document.getElementById('settingsBtn').classList.add('show');
                 updateUserEmailDisplay();
             }
@@ -1223,7 +1223,7 @@
         // Settings functions
         function openSettings() {
             const currentUser = JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
-            if (currentUser && currentUser.email === ADMIN_EMAIL) {
+            if (currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
                 document.getElementById('settingsPanel').classList.add('show');
                 updateUserEmailDisplay();
                 updateLoginRequestsList();
@@ -1321,7 +1321,7 @@
                 listDiv.innerHTML = authorized.map((email, index) => `
                     <div style="margin: 5px 0; display: flex; justify-content: space-between; align-items: center;">
                         <span>${email}</span>
-                        ${email !== ADMIN_EMAIL ? `<button onclick="removeAuthorizedEmail('${email}')" style="background: none; border: none; color: #ffaa00; cursor: pointer; font-size: 0.8em;">REMOVE</button>` : '<span style="color: #ffaa00;">ADMIN</span>'}
+                        ${!ADMIN_EMAILS.includes(email) ? `<button onclick="removeAuthorizedEmail('${email}')" style="background: none; border: none; color: #ffaa00; cursor: pointer; font-size: 0.8em;">REMOVE</button>` : '<span style="color: #ffaa00;">ADMIN</span>'}
                     </div>
                 `).join('');
             }
