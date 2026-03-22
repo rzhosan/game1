@@ -200,37 +200,17 @@
 
   <div id="loading" class="screen">
     <noscript>Enable JavaScript</noscript>
-    <div class="loading-text">Ładowanie...</div>
+    
+    
     <div class="progress-bar-outer"><div class="progress-bar-inner" id="loading-inner"></div></div>
-    <div id="loading-timeout" style="display: none; margin-top: 20px; color: #ffaaaa; font-size: 12px; max-width: 400px;">
-      Ładowanie trwa dłużej niż zwykle. Jeśli będzie to trwać zbyt długo, strona się odłączy. Spróbuj <a href="javascript:location.reload()" style="color: #ffff00; text-decoration: underline;">odświeżyć stronę</a>.
-    </div>
   </div>
 
   <div id="error" class="screen" hidden>
-    <div style="text-align: center; max-width: 700px; padding: 40px 20px;">
-      <div style="font-size: 80px; margin-bottom: 30px; opacity: 0.6;">📄</div>
-      <h1 style="font-size: 32px; margin: 0 0 10px 0; color: #333; font-weight: normal;">Ta witryna jest nieosiągalna</h1>
-      <p style="font-size: 16px; color: #666; margin: 20px 0;">Serwer <strong>localhost</strong> odmówił połączenia.</p>
-      
-      <div style="text-align: left; margin: 40px 0; color: #666;">
-        <p style="margin: 0 0 15px 0; font-weight: bold;">Wypróbuj rozwiązania:</p>
-        <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.8;">
-          <li>Sprawdzić połączenie</li>
-          <li><a href="javascript:location.reload()" style="color: #0078d4; text-decoration: underline;">Odświeżyć stronę</a></li>
-        </ul>
-      </div>
-      
-      <details style="text-align: left; margin: 40px auto;">
-        <summary style="cursor: pointer; color: #0078d4; font-weight: bold; padding: 10px; background: #f0f0f0; border-radius: 4px; margin-bottom: 10px;">Szczegóły</summary>
-        <p id="error-message" style="background: #f5f5f5; padding: 15px; border-radius: 4px; font-weight: bold; color: #333; margin: 10px 0;"></p>
-        <p id="error-stack" style="background: #f5f5f5; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #666; max-height: 200px; overflow: auto; margin: 10px 0; white-space: pre-wrap;"></p>
-      </details>
-      
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd;">
-        <p style="font-size: 12px; color: #999; margin: 0;">ERR_CONNECTION_REFUSED</p>
-      </div>
-    </div>
+    <h1>Error</h1>
+    <details>
+      <summary id="error-message"></summary>
+      <p id="error-stack"></p>
+    </details>
   </div>
 
   <script>/*!
@@ -272,27 +252,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       console.error(error);
       if (!errorScreen.hidden) return;
       errorScreen.hidden = false;
-      
-      // Format error code
-      let errorCode = 'ERR_UNKNOWN';
-      let errorMessage = '' + error?.message || error;
-      
-      if (error?.message?.includes('Timeout') || error?.code === 'ERR_CONNECTION_REFUSED') {
-        errorCode = 'ERR_CONNECTION_REFUSED';
-        errorMessage = 'Serwer localhost odmówił połączenia';
-      } else if (error?.message?.includes('project.json')) {
-        errorCode = 'ERR_FILE_NOT_FOUND';
-        errorMessage = 'Brakuje wymaganych plików gry';
-      } else if (error?.message?.includes('Zip')) {
-        errorCode = 'ERR_INVALID_FILE';
-        errorMessage = 'Uszkodzony plik gry';
-      } else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
-        errorCode = 'ERR_CONNECTION_REFUSED';
-        errorMessage = 'Serwer odmówił połączenia';
-      }
-      
-      errorScreenMessage.textContent = `Kod błędu: ${errorCode}`;
-      errorScreenStack.textContent = `${errorMessage}\n\n${error?.stack || 'Brak szczegółów'}`;
+      errorScreenMessage.textContent = '' + error;
+      let debug = error && error.stack || 'no stack';
+      debug += '\nUser agent: ' + navigator.userAgent;
+      errorScreenStack.textContent = debug;
     };
     const setProgress = (progress) => {
       if (loadingInner) loadingInner.style.width = progress * 100 + '%';
@@ -442,66 +405,22 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       })();
     </script>
   <script>
-    const LOAD_TIMEOUT = 30000; // 30 seconds timeout
-    const TIMEOUT_WARNING = 20000; // Show warning at 20 seconds
-    
-    let timeoutWarningShown = false;
-    let timeoutWarningTimer = null;
-    
-    const showTimeoutWarning = () => {
-      if (!timeoutWarningShown && !loadingScreen.hidden) {
-        timeoutWarningShown = true;
-        const warningDiv = document.getElementById('loading-timeout');
-        if (warningDiv) {
-          warningDiv.style.display = 'block';
-        }
-      }
-    };
-    
     const run = async () => {
-      try {
-        // Set timeout warning
-        timeoutWarningTimer = setTimeout(showTimeoutWarning, TIMEOUT_WARNING);
-        
-        // Set timeout for loading
-        const timeoutPromise = new Promise((_, reject) => {
-          const err = new Error('Network timeout - serwer localhost odmówił połączenia');
-          err.code = 'ERR_CONNECTION_REFUSED';
-          setTimeout(() => reject(err), LOAD_TIMEOUT);
-        });
-        
-        // Race between loading and timeout
-        const projectDataPromise = getProjectData();
-        const projectData = await Promise.race([projectDataPromise, timeoutPromise]);
-        
-        // Clear timeout warning timer
-        if (timeoutWarningTimer) clearTimeout(timeoutWarningTimer);
-        
-        if (!projectData) {
-          throw new Error('Failed to load project data');
-        }
-        
-        await scaffolding.loadProject(projectData);
-        setProgress(1);
-        loadingScreen.hidden = true;
-        
-        if (false) {
+      const projectData = await getProjectData();
+      await scaffolding.loadProject(projectData);
+      setProgress(1);
+      loadingScreen.hidden = true;
+      if (false) {
+        scaffolding.start();
+      } else {
+        launchScreen.hidden = false;
+        launchScreen.addEventListener('click', () => {
+          launchScreen.hidden = true;
           scaffolding.start();
-        } else {
-          launchScreen.hidden = false;
-          launchScreen.addEventListener('click', () => {
-            launchScreen.hidden = true;
-            scaffolding.start();
-          });
-          launchScreen.focus();
-        }
-      } catch (error) {
-        // Clear timeout warning timer
-        if (timeoutWarningTimer) clearTimeout(timeoutWarningTimer);
-        handleError(error);
+        });
+        launchScreen.focus();
       }
     };
-    
     run().catch(handleError);
   </script>
   <a href="index.html" class="back-home-button">← BACK HOME</a>
