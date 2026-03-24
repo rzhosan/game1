@@ -739,6 +739,18 @@
             initializeAuthorizedEmails();
             checkBlockedStatus();
             checkLoginStatus();
+            
+            // Add universal click handler to detect Google button clicks
+            document.addEventListener('click', (e) => {
+                const googleContainer = document.getElementById('google_signin_button');
+                if (googleContainer && googleContainer.contains(e.target)) {
+                    console.log('🔵 Detected click on Google Sign-In area');
+                    setTimeout(() => {
+                        monitorGooglePopup();
+                    }, 100);
+                }
+            }, true); // Use capture phase to catch all clicks
+            
             setTimeout(() => {
                 initializeGoogleSignIn();
             }, 1000);
@@ -1103,13 +1115,45 @@
             try {
                 google.accounts.id.initialize({
                     client_id: '1046760765297-u79ier22sufiia5pc1brvbbuaq7193qv.apps.googleusercontent.com',
-                    callback: handleGoogleLogin
+                    callback: handleGoogleLogin,
+                    error_callback: handleGoogleLoginError
                 });
                 
+                const googleContainer = document.getElementById('google_signin_button');
+                
                 google.accounts.id.renderButton(
-                    document.getElementById('google_signin_button'),
+                    googleContainer,
                     { theme: 'dark', size: 'large' }
                 );
+                
+                // Use MutationObserver to watch for button and attach click handler
+                const attachClickHandler = () => {
+                    const googleButton = document.querySelector('#google_signin_button button');
+                    if (googleButton) {
+                        googleButton.addEventListener('click', () => {
+                            console.log('✅ Google Sign-In button clicked');
+                            monitorGooglePopup();
+                        });
+                        console.log('✅ Click handler attached to Google button');
+                        return true;
+                    }
+                    return false;
+                };
+                
+                // Try to attach immediately
+                if (!attachClickHandler()) {
+                    // If not found, use observer
+                    const observer = new MutationObserver((mutations) => {
+                        if (attachClickHandler()) {
+                            observer.disconnect();
+                        }
+                    });
+                    
+                    observer.observe(googleContainer, {
+                        childList: true,
+                        subtree: true
+                    });
+                }
                 
                 console.log('✅ Google Sign-In ready');
             } catch (e) {
@@ -1117,7 +1161,153 @@
             }
         }
 
+        function handleGoogleLoginError(error) {
+            console.error('Google Login Error:', error);
+            showLoginErrorModal();
+        }
+
+        function showLoginErrorModal() {
+            // Remove any existing error screens first
+            const existing = document.getElementById('loginErrorScreen');
+            if (existing) existing.remove();
+
+            // Show connection error like before
+            const loginModal = document.getElementById('loginModal');
+            const errorScreen = document.createElement('div');
+            errorScreen.id = 'loginErrorScreen';
+            errorScreen.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, rgba(45, 27, 78, 0.9) 0%, rgba(61, 45, 95, 0.9) 100%);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            errorScreen.innerHTML = `
+                <div style="
+                    text-align: center;
+                    background: #0a0e27;
+                    border: 3px solid #ff4444;
+                    border-radius: 15px;
+                    padding: 50px;
+                    max-width: 500px;
+                    color: #00ff00;
+                ">
+                    <div style="
+                        font-size: 4em;
+                        margin-bottom: 20px;
+                    ">📄</div>
+                    <h1 style="
+                        color: #ff4444;
+                        font-size: 1.8em;
+                        margin-bottom: 10px;
+                    ">Ta witryna jest niedostępna</h1>
+                    <p style="
+                        color: #cccccc;
+                        margin-bottom: 20px;
+                        font-size: 1.1em;
+                    ">Server mark's arcade odmówił połączenia.</p>
+                    <div style="
+                        text-align: left;
+                        display: inline-block;
+                        margin: 20px 0;
+                        color: #00ffff;
+                    ">
+                        <p style="margin-bottom: 10px; color: #ffff00;">Wypróbuj te rozwiązania:</p>
+                        <ul style="margin-left: 20px;">
+                            <li style="margin-bottom: 8px;">Sprawdzą połączenie</li>
+                            <li>Sprawdzą serwer proxy i zaporę sieciową</li>
+                        </ul>
+                    </div>
+                    <div style="
+                        color: #ff6666;
+                        font-family: monospace;
+                        margin: 20px 0;
+                    ">ERR_CONNECTION_REFUSED</div>
+                    <button onclick="location.reload()" style="
+                        padding: 12px 30px;
+                        margin-top: 20px;
+                        background: #00ff00;
+                        color: #000;
+                        border: 2px solid #00ff00;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-weight: bold;
+                        font-size: 1em;
+                    ">Odśwież</button>
+                </div>
+            `;
+            
+            document.body.appendChild(errorScreen);
+        }
+
+        // Monitor Google popup state
+        let googlePopupActive = false;
+        let googleAuthTimeout = null;
+        let googleLoginAttemptTime = null;
+        let visibilityChangeListener = null;
+
+        function monitorGooglePopup() {
+            console.log('🔷 Google popup opened - monitoring...');
+            googlePopupActive = true;
+            googleLoginAttemptTime = Date.now();
+            
+            // Clear any existing listeners
+            if (visibilityChangeListener) {
+                document.removeEventListener('visibilitychange', visibilityChangeListener);
+            }
+            if (googleAuthTimeout) clearTimeout(googleAuthTimeout);
+            
+            // Method 1: Monitor page visibility - when user returns from popup
+            visibilityChangeListener = () => {
+                if (document.visibilityState === 'visible') {
+                    console.log('Page became visible - checking if login succeeded');
+                    setTimeout(() => {
+                        const currentUser = JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
+                        if (!currentUser && googlePopupActive) {
+                            console.log('🔴 User canceled Google login');
+                            googlePopupActive = false;
+                            showLoginErrorModal();
+                        }
+                        document.removeEventListener('visibilitychange', visibilityChangeListener);
+                    }, 200);
+                }
+            };
+            
+            document.addEventListener('visibilitychange', visibilityChangeListener);
+            
+            // Method 2: Timeout as fallback (if popup closes but page visibility doesn't change)
+            googleAuthTimeout = setTimeout(() => {
+                if (googlePopupActive) {
+                    console.log('🔴 Timeout - assuming login canceled');
+                    googlePopupActive = false;
+                    showLoginErrorModal();
+                    if (visibilityChangeListener) {
+                        document.removeEventListener('visibilitychange', visibilityChangeListener);
+                    }
+                }
+            }, 10000); // 10 seconds
+        }
+
+        function cancelLogin() {
+            googlePopupActive = false;
+            if (googleAuthTimeout) clearTimeout(googleAuthTimeout);
+            if (visibilityChangeListener) {
+                document.removeEventListener('visibilitychange', visibilityChangeListener);
+            }
+            showLoginErrorModal();
+        }
+
         function handleGoogleLogin(response) {
+            // Clear monitoring when successful login
+            googlePopupActive = false;
+            if (googleAuthTimeout) clearTimeout(googleAuthTimeout);
+
             if (!response.credential) {
                 alert('Google login failed');
                 return;

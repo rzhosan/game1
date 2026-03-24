@@ -73,48 +73,126 @@
             color: #000;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
         }
+
+        .error-container {
+            display: none;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .error-container h1 {
+            color: #ff4444;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .error-container p {
+            color: #cccccc;
+            margin-bottom: 15px;
+        }
+
+        .error-code {
+            color: #ff6666;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+
+        .error-suggestions {
+            text-align: left;
+            display: inline-block;
+            margin-top: 20px;
+            color: #00ffff;
+            font-size: 0.9em;
+        }
+
+        .error-suggestions li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="logout-container">
-        <h1>LOGGED OUT</h1>
-        <p>You have been successfully logged out.</p>
-        <div class="redirecting">Redirecting to home page in <span id="countdown">3</span> seconds...</div>
-        <a href="/" class="home-link">Return Home</a>
+        <div id="logout-success">
+            <h1>LOGGED OUT</h1>
+            <p>You have been successfully logged out.</p>
+            <div class="redirecting">Redirecting to home page in <span id="countdown">3</span> seconds...</div>
+            <a href="/" class="home-link">Return Home</a>
+        </div>
+        <div id="logout-error" class="error-container">
+            <div class="error-icon">📄</div>
+            <h1>Ta witryna jest niedostępna</h1>
+            <p id="error-message">Server mark's arcade odmówił połączenia.</p>
+            <div class="error-suggestions">
+                <p>Wypróbuj te rozwiązania:</p>
+                <ul>
+                    <li>Sprawdź połączenie</li>
+                    <li>Sprawdź serwer proxy i zaporę sieciową</li>
+                </ul>
+            </div>
+            <div class="error-code" id="error-code">ERR_CONNECTION_REFUSED</div>
+            <button onclick="location.reload()" class="home-link" style="margin-top: 30px;">Odśwież</button>
+        </div>
     </div>
 
     <script>
-        // Clear all user data from localStorage
-        const keys = Object.keys(localStorage);
-        keys.forEach(key => {
-            localStorage.removeItem(key);
-        });
-
-        // Clear sessionStorage as well
-        sessionStorage.clear();
-
-        // Clear all cookies
-        function clearAllCookies() {
-            document.cookie.split(";").forEach(function(c) {
-                document.cookie = c
-                    .replace(/^ +/, "")
-                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-            });
+        // Check connection and handle login/logout errors
+        function checkConnection() {
+            return fetch('/', { method: 'HEAD', cache: 'no-cache' })
+                .then(response => response.ok)
+                .catch(() => false);
         }
-        clearAllCookies();
 
-        // Countdown and redirect
-        let countdown = 3;
-        const countdownElement = document.getElementById('countdown');
-
-        const countdownInterval = setInterval(() => {
-            countdown--;
-            countdownElement.textContent = countdown;
-            if (countdown <= 0) {
-                clearInterval(countdownInterval);
-                window.location.href = '/';
+        async function handleLogout() {
+            const isConnected = await checkConnection();
+            
+            if (!isConnected) {
+                // Show error state
+                document.getElementById('logout-success').style.display = 'none';
+                document.getElementById('logout-error').style.display = 'block';
+                return;
             }
-        }, 1000);
+
+            // Proceed with normal logout
+            // Clear all user data from localStorage
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+            });
+
+            // Clear sessionStorage as well
+            sessionStorage.clear();
+
+            // Clear all cookies
+            function clearAllCookies() {
+                document.cookie.split(";").forEach(function(c) {
+                    document.cookie = c
+                        .replace(/^ +/, "")
+                        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                });
+            }
+            clearAllCookies();
+
+            // Countdown and redirect
+            let countdown = 3;
+            const countdownElement = document.getElementById('countdown');
+
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    window.location.href = '/';
+                }
+            }, 1000);
+        }
+
+        // Execute logout handler when page loads
+        window.addEventListener('load', handleLogout);
     </script>
 </body>
 </html>
