@@ -1394,12 +1394,7 @@
 
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem(CURRENT_USER_KEY);
-                document.getElementById('settingsPanel').classList.remove('show');
-                document.getElementById('settingsBtn').classList.remove('show');
-                document.getElementById('logoutBtn').classList.remove('show');
-                document.getElementById('loginModal').style.display = 'flex';
-                location.reload();
+                window.location.href = '/logout.html';
             }
         }
 
