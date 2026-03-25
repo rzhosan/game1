@@ -517,6 +517,11 @@
             <div class="login-buttons">
                 <label class="settings-label">Sign in with Google:</label>
                 <div id="google_signin_button" style="display: flex; justify-content: center; margin-top: 15px;"></div>
+                
+                <label class="settings-label" style="margin-top: 25px;">Sign in with GitHub:</label>
+                <button id="github_signin_button" class="login-btn" style="margin-top: 15px;">
+                    🐙 Sign in with GitHub
+                </button>
             </div>
         </div>
     </div>
@@ -753,6 +758,7 @@
             
             setTimeout(() => {
                 initializeGoogleSignIn();
+                initializeGitHubSignIn();
             }, 1000);
             console.log('INITIALIZATION COMPLETE');
         });
@@ -1344,6 +1350,181 @@
 
         function showGooglePopup() {
             // Placeholder
+        }
+
+        // ============================================
+        // GITHUB SIGN-IN IMPLEMENTATION
+        // ============================================
+        
+        // GitHub OAuth Configuration
+        const GITHUB_CLIENT_ID = 'Ov23liZUtcVmcj7Mgai4'; // Your GitHub OAuth app Client ID
+        const GITHUB_REDIRECT_URI = window.location.origin + window.location.pathname;
+        const GITHUB_AUTH_ENDPOINT = 'https://github.com/login/oauth/authorize';
+        
+        // Initialize GitHub Sign-In
+        function initializeGitHubSignIn() {
+            const githubButton = document.getElementById('github_signin_button');
+            if (!githubButton) return;
+            
+            githubButton.addEventListener('click', () => {
+                console.log('🐙 GitHub Sign-In button clicked');
+                startGitHubLogin();
+            });
+            
+            console.log('✅ GitHub Sign-In ready');
+            
+            // Check for GitHub OAuth callback
+            handleGitHubCallback();
+        }
+        
+        // Start GitHub OAuth flow
+        function startGitHubLogin() {
+            if (GITHUB_CLIENT_ID === 'YOUR_GITHUB_CLIENT_ID') {
+                alert('⚠️ GitHub OAuth not configured. Please set up GitHub OAuth app first.');
+                console.error('GitHub Client ID not configured');
+                return;
+            }
+            
+            // Generate a random state for CSRF protection
+            const state = generateRandomState();
+            sessionStorage.setItem('github_oauth_state', state);
+            
+            // Redirect to GitHub authorization
+            const authURL = new URL(GITHUB_AUTH_ENDPOINT);
+            authURL.searchParams.set('client_id', GITHUB_CLIENT_ID);
+            authURL.searchParams.set('redirect_uri', GITHUB_REDIRECT_URI);
+            authURL.searchParams.set('scope', 'user:email');
+            authURL.searchParams.set('state', state);
+            
+            window.location.href = authURL.toString();
+        }
+        
+        // Generate random state for OAuth security
+        function generateRandomState() {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let state = '';
+            for (let i = 0; i < 32; i++) {
+                state += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return state;
+        }
+        
+        // Handle GitHub OAuth callback
+        function handleGitHubCallback() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const state = params.get('state');
+            const error = params.get('error');
+            
+            if (error) {
+                console.error('GitHub OAuth error:', error);
+                alert('GitHub login failed: ' + error);
+                return;
+            }
+            
+            if (code && state) {
+                // Verify state
+                const savedState = sessionStorage.getItem('github_oauth_state');
+                if (state !== savedState) {
+                    console.error('State mismatch - potential CSRF attack');
+                    alert('Security error: State mismatch');
+                    return;
+                }
+                
+                console.log('🐙 GitHub authorization code received');
+                sessionStorage.removeItem('github_oauth_state');
+                
+                // Exchange code for access token using backend service
+                exchangeGitHubCode(code);
+            }
+        }
+        
+        // Exchange GitHub authorization code for access token
+        function exchangeGitHubCode(code) {
+            // NOTE: This requires a backend service to securely exchange the code for a token
+            // The backend should be a serverless function that:
+            // 1. Receives the code
+            // 2. Calls GitHub API with client_id, client_secret, and code
+            // 3. Returns the access token
+            // 4. Returns the user's GitHub profile information
+            
+            // Example backend endpoints:
+            // - Vercel: /api/github-callback
+            // - Netlify: /.netlify/functions/github-callback
+            // - Custom server: https://your-backend.com/api/github-callback
+            
+            const backendURL = 'YOUR_BACKEND_ENDPOINT'; // Replace with your backend endpoint
+            
+            if (backendURL === 'YOUR_BACKEND_ENDPOINT') {
+                alert('⚠️ Backend endpoint not configured. Please set up your backend service.');
+                console.error('Backend endpoint not configured');
+                return;
+            }
+            
+            // Show loading state
+            const loginModal = document.getElementById('loginModal');
+            if (loginModal) {
+                loginModal.innerHTML = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0a0e27; border: 2px solid #00ff00; padding: 30px; border-radius: 10px; color: #00ff00; text-align: center;"><p>🐙 Logging in with GitHub...</p></div>';
+            }
+            
+            // Call backend to exchange code for token
+            fetch(backendURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    redirect_uri: GITHUB_REDIRECT_URI
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                console.log('✅ GitHub user data received:', data);
+                handleGitHubLoginSuccess(data);
+            })
+            .catch(error => {
+                console.error('❌ GitHub token exchange failed:', error);
+                alert('❌ Failed to log in with GitHub: ' + error.message);
+                location.reload();
+            });
+        }
+        
+        // Handle successful GitHub login
+        function handleGitHubLoginSuccess(userData) {
+            // userData should contain: login (username), email, avatar_url, name, id
+            
+            if (!userData.email) {
+                alert('⚠️ Email not available. GitHub OAuth requires email scope.');
+                return;
+            }
+            
+            // Create user object similar to Google login
+            const userObject = {
+                email: userData.email,
+                name: userData.name || userData.login,
+                picture: userData.avatar_url,
+                provider: 'github',
+                github_username: userData.login,
+                github_id: userData.id
+            };
+            
+            // Authorize email
+            let authorized = JSON.parse(localStorage.getItem(AUTHORIZED_EMAILS_KEY) || '[]');
+            if (!authorized.includes(userData.email)) {
+                authorized.push(userData.email);
+                localStorage.setItem(AUTHORIZED_EMAILS_KEY, JSON.stringify(authorized));
+            }
+            
+            // Login user
+            loginUser(userObject);
+            
+            // Clean up URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
 
         // Microsoft Sign-In (removed)
