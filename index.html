@@ -783,9 +783,26 @@
         // ============================================
         
         function checkInternetConnection() {
+            // Najpierw sprawdzenie navigator.onLine
             if (!navigator.onLine) {
+                console.log('❌ navigator.onLine = false');
                 showOfflineModal();
+                return;
             }
+            
+            // Test rzeczywistego połączenia - spróbuj załadować plik
+            fetch(window.location.href, {
+                method: 'HEAD',
+                cache: 'no-store'
+            })
+            .then(response => {
+                console.log('✅ Połączenie OK');
+                hideOfflineModal();
+            })
+            .catch(error => {
+                console.error('❌ Brak połączenia:', error);
+                showOfflineModal();
+            });
         }
         
         function showOfflineModal() {
