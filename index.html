@@ -522,6 +522,11 @@
                 <button id="github_signin_button" class="login-btn" style="margin-top: 15px;">
                     🐙 Sign in with GitHub
                 </button>
+                
+                <label class="settings-label" style="margin-top: 25px;">Sign in with zhasan.online:</label>
+                <button onclick="showPasswordLoginModal()" class="login-btn" style="margin-top: 15px;">
+                    🔑 Login with Credentials
+                </button>
             </div>
         </div>
     </div>
@@ -737,6 +742,7 @@
         const LOGIN_REQUESTS_KEY = 'marcadesLoginRequests';
         const TWO_FA_SECRET_KEY = 'marcadesTwoFASecret';
         const TWO_FA_ENABLED_KEY = 'marcadesTwoFAEnabled';
+        const USER_PASSWORDS_KEY = 'marcadesUserPasswords'; // Nowe - przechowywanie haseł (zahasowane)
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -1698,6 +1704,337 @@
 
         // Microsoft Sign-In (removed)
 
+        // ============================================
+        // PASSWORD MANAGEMENT (SHA-256)
+        // ============================================
+        
+        // Zahasuj hasło za pomocą SHA-256
+        async function hashPassword(password) {
+            const msgBuffer = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+        
+        // Sprawdź czy użytkownik ma hasło ustawione
+        function hasUserPassword(email) {
+            const passwords = JSON.parse(localStorage.getItem(USER_PASSWORDS_KEY) || '{}');
+            return email in passwords;
+        }
+        
+        // Zapisz zahasane hasło
+        async function saveUserPassword(email, password) {
+            const hashedPassword = await hashPassword(password);
+            let passwords = JSON.parse(localStorage.getItem(USER_PASSWORDS_KEY) || '{}');
+            passwords[email] = hashedPassword;
+            localStorage.setItem(USER_PASSWORDS_KEY, JSON.stringify(passwords));
+            console.log('✅ Hasło zapisane dla:', email);
+        }
+        
+        // Sprawdź hasło
+        async function verifyPassword(email, password) {
+            const hashedPassword = await hashPassword(password);
+            let passwords = JSON.parse(localStorage.getItem(USER_PASSWORDS_KEY) || '{}');
+            return passwords[email] === hashedPassword;
+        }
+        
+        // Pokaż modal do ustawienia hasła (pierwsze logowanie)
+        function showPasswordSetupModal(email) {
+            const existing = document.getElementById('passwordSetupModal');
+            if (existing) existing.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'passwordSetupModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(5px);
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+                    border: 3px solid #00ff00;
+                    border-radius: 15px;
+                    padding: 50px;
+                    max-width: 500px;
+                    text-align: center;
+                    color: #00ff00;
+                    box-shadow: 0 0 50px rgba(0, 255, 0, 0.8);
+                ">
+                    <h1 style="
+                        color: #ffff00;
+                        font-size: 2em;
+                        margin-bottom: 20px;
+                        text-shadow: 2px 2px #ff00ff;
+                    ">🔐 USTAWIENIE HASŁA</h1>
+                    
+                    <p style="
+                        color: #00ffff;
+                        margin-bottom: 20px;
+                        font-size: 0.95em;
+                        line-height: 1.6;
+                    ">
+                        Witaj! ${email}<br/>
+                        <br/>
+                        Aby wejść do portalu gier,<br/>
+                        musisz wymyślić hasło.
+                    </p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <input 
+                            id="newPassword" 
+                            type="password" 
+                            placeholder="Wymyśl hasło" 
+                            style="
+                                width: 100%;
+                                padding: 12px;
+                                background: #1a1f3a;
+                                border: 2px solid #00ffff;
+                                color: #00ff00;
+                                border-radius: 8px;
+                                font-family: 'Courier New', monospace;
+                                margin-bottom: 10px;
+                                box-sizing: border-box;
+                            "
+                        />
+                        <input 
+                            id="confirmPassword" 
+                            type="password" 
+                            placeholder="Potwierdź hasło" 
+                            style="
+                                width: 100%;
+                                padding: 12px;
+                                background: #1a1f3a;
+                                border: 2px solid #00ffff;
+                                color: #00ff00;
+                                border-radius: 8px;
+                                font-family: 'Courier New', monospace;
+                                box-sizing: border-box;
+                            "
+                        />
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button onclick="setNewPassword('${email}')" 
+                            style="
+                                flex: 1;
+                                padding: 12px;
+                                background: #00ff00;
+                                color: #000;
+                                border: 2px solid #00ff00;
+                                border-radius: 8px;
+                                font-weight: bold;
+                                cursor: pointer;
+                                font-size: 1em;
+                                font-family: 'Courier New', monospace;
+                            "
+                        >✓ USTAW HASŁO</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('newPassword').focus();
+        }
+        
+        // Ustaw nowe hasło
+        async function setNewPassword(email) {
+            const password = document.getElementById('newPassword')?.value;
+            const confirm = document.getElementById('confirmPassword')?.value;
+            
+            if (!password || !confirm) {
+                alert('⚠️ Wpisz hasło w oba pola');
+                return;
+            }
+            
+            if (password.length < 4) {
+                alert('⚠️ Hasło musi mieć co najmniej 4 znaki');
+                return;
+            }
+            
+            if (password !== confirm) {
+                alert('❌ Hasła się nie zgadzają!');
+                return;
+            }
+            
+            await saveUserPassword(email, password);
+            document.getElementById('passwordSetupModal').remove();
+            
+            // Po ustawieniu hasła - zaloguj
+            loginUserAfterPasswordSetup();
+        }
+        
+        // Pokaż modal do logowania z hasłem
+        function showPasswordLoginModal() {
+            const existing = document.getElementById('passwordLoginModal');
+            if (existing) existing.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'passwordLoginModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(5px);
+            `;
+            
+            // Jeśli przychodzi z OAuth, email jest znany
+            const isFromOAuth = pendingUserData !== null;
+            const emailField = isFromOAuth 
+                ? `<div style="width: 100%; padding: 12px; background: #1a1f3a; border: 2px solid #00ffff; color: #00ff00; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 10px; box-sizing: border-box;">${pendingUserData.email}</div><input id="loginEmail" type="hidden" value="${pendingUserData.email}" />`
+                : `<input id="loginEmail" type="email" placeholder="Email" style="width: 100%; padding: 12px; background: #1a1f3a; border: 2px solid #00ffff; color: #00ff00; border-radius: 8px; font-family: 'Courier New', monospace; margin-bottom: 10px; box-sizing: border-box;" />`;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+                    border: 3px solid #00ff00;
+                    border-radius: 15px;
+                    padding: 50px;
+                    max-width: 500px;
+                    text-align: center;
+                    color: #00ff00;
+                    box-shadow: 0 0 50px rgba(0, 255, 0, 0.8);
+                ">
+                    <h1 style="
+                        color: #ffff00;
+                        font-size: 2em;
+                        margin-bottom: 20px;
+                        text-shadow: 2px 2px #ff00ff;
+                    ">🔑 LOGOWANIE</h1>
+                    
+                    <p style="
+                        color: #00ffff;
+                        margin-bottom: 20px;
+                        font-size: 0.95em;
+                    ">
+                        Wpisz swoje hasło
+                    </p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        ${emailField}
+                        <input 
+                            id="loginPassword" 
+                            type="password" 
+                            placeholder="Hasło" 
+                            style="
+                                width: 100%;
+                                padding: 12px;
+                                background: #1a1f3a;
+                                border: 2px solid #00ffff;
+                                color: #00ff00;
+                                border-radius: 8px;
+                                font-family: 'Courier New', monospace;
+                                box-sizing: border-box;
+                            "
+                        />
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button onclick="verifyLoginPassword()" 
+                            style="
+                                flex: 1;
+                                padding: 12px;
+                                background: #00ff00;
+                                color: #000;
+                                border: 2px solid #00ff00;
+                                border-radius: 8px;
+                                font-weight: bold;
+                                cursor: pointer;
+                                font-size: 1em;
+                                font-family: 'Courier New', monospace;
+                            "
+                        >✓ ZALOGUJ</button>
+                        <button onclick="document.getElementById('passwordLoginModal').remove()" 
+                            style="
+                                flex: 1;
+                                padding: 12px;
+                                background: #ff6b6b;
+                                color: white;
+                                border: 2px solid #ff6b6b;
+                                border-radius: 8px;
+                                font-weight: bold;
+                                cursor: pointer;
+                                font-size: 1em;
+                                font-family: 'Courier New', monospace;
+                            "
+                        >✕ ANULUJ</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('loginPassword').focus();
+        }
+        
+        // Sprawdź hasło przy logowaniu
+        async function verifyLoginPassword() {
+            const email = document.getElementById('loginEmail')?.value;
+            const password = document.getElementById('loginPassword')?.value;
+            
+            if (!email || !password) {
+                alert('⚠️ Wpisz email i hasło');
+                return;
+            }
+            
+            const isValid = await verifyPassword(email, password);
+            
+            if (!isValid) {
+                alert('❌ Błędne hasło lub email!');
+                document.getElementById('loginPassword').value = '';
+                document.getElementById('loginPassword').focus();
+                return;
+            }
+            
+            // Zamknij modal
+            const modal = document.getElementById('passwordLoginModal');
+            if (modal) modal.remove();
+            
+            // Jeśli pendingUserData jest ustawiony (z OAuth), użyj go
+            if (pendingUserData && pendingUserData.email === email) {
+                loginUserFinal(pendingUserData);
+                pendingUserData = null;
+            } else {
+                // Zaloguj użytkownika lokalnie
+                const user = {
+                    email: email,
+                    name: email,
+                    provider: 'local',
+                    picture: null
+                };
+                
+                loginUserFinal(user);
+            }
+        }
+            alert('✅ Zalogowany!');
+        }
+        
+        // Przechowaj email i dane przed ustawieniem hasła
+        let pendingUserData = null;
+        
+        function loginUserAfterPasswordSetup() {
+            if (pendingUserData) {
+                loginUserFinal(pendingUserData);
+                pendingUserData = null;
+            }
+        }
+
         // Save user to localStorage
         function loginUser(userData) {
             const blockedPlayers = JSON.parse(localStorage.getItem(BLOCKED_PLAYERS_KEY) || '[]');
@@ -1710,6 +2047,22 @@
                 return;
             }
 
+            // Sprawdzenie czy hasło już istnieje
+            if (!hasUserPassword(userData.email)) {
+                // Pierwsze logowanie - poproś o ustawienie hasła
+                pendingUserData = userData;
+                showPasswordSetupModal(userData.email);
+                return;
+            } else {
+                // Już ma hasło - poproś o podanie hasła przy każdym logowaniu
+                pendingUserData = userData;
+                showPasswordLoginModal();
+                return;
+            }
+        }
+        
+        // Finalne zalogowanie (po weryfikacji hasła)
+        function loginUserFinal(userData) {
             localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
             
             // Save user to users list
