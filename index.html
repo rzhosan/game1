@@ -748,7 +748,7 @@
             // Nasłuchiwanie zmian stanu internetu
             window.addEventListener('online', () => {
                 console.log('✅ Połączenie internetowe przywrócone');
-                hideOfflineModal();
+                // Nie usuwamy modala - zawsze pokazujemy gdy brak internetu
             });
             
             window.addEventListener('offline', () => {
@@ -854,6 +854,22 @@
                     ">
                         STATUS: OFFLINE ⚠️
                     </div>
+                    
+                    <button onclick="location.reload()" style="
+                        background: #00ff00;
+                        color: #000;
+                        border: 2px solid #00ff00;
+                        border-radius: 8px;
+                        padding: 12px 30px;
+                        font-size: 1em;
+                        cursor: pointer;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        transition: all 0.3s;
+                        font-family: 'Courier New', monospace;
+                    " onmouseover="this.style.boxShadow='0 0 20px rgba(0, 255, 0, 0.8)'" onmouseout="this.style.boxShadow='none'">
+                        🔄 SPRÓBUJ PONOWNIE
+                    </button>
                     
                     <div style="
                         color: #00ffff;
