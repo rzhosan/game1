@@ -741,6 +741,21 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             console.log('PAGE LOADED');
+            
+            // Sprawdzenie internetu na starcie
+            checkInternetConnection();
+            
+            // Nasłuchiwanie zmian stanu internetu
+            window.addEventListener('online', () => {
+                console.log('✅ Połączenie internetowe przywrócone');
+                hideOfflineModal();
+            });
+            
+            window.addEventListener('offline', () => {
+                console.log('❌ Brak połączenia internetowego');
+                showOfflineModal();
+            });
+            
             initializeAuthorizedEmails();
             checkBlockedStatus();
             checkLoginStatus();
@@ -762,6 +777,104 @@
             }, 1000);
             console.log('INITIALIZATION COMPLETE');
         });
+
+        // ============================================
+        // OFFLINE / INTERNET CHECK
+        // ============================================
+        
+        function checkInternetConnection() {
+            if (!navigator.onLine) {
+                showOfflineModal();
+            }
+        }
+        
+        function showOfflineModal() {
+            // Usuń stary modal jeśli istnieje
+            const existing = document.getElementById('offlineModal');
+            if (existing) existing.remove();
+            
+            const offlineModal = document.createElement('div');
+            offlineModal.id = 'offlineModal';
+            offlineModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(5px);
+            `;
+            
+            offlineModal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #3a0f0f 0%, #2a1a1a 100%);
+                    border: 3px solid #ff3333;
+                    border-radius: 15px;
+                    padding: 50px;
+                    max-width: 500px;
+                    text-align: center;
+                    color: #00ff00;
+                    box-shadow: 0 0 50px rgba(255, 51, 51, 0.8);
+                ">
+                    <div style="
+                        font-size: 5em;
+                        margin-bottom: 20px;
+                    ">📡❌</div>
+                    
+                    <h1 style="
+                        color: #ff3333;
+                        font-size: 2em;
+                        margin-bottom: 15px;
+                        text-shadow: 2px 2px #dd0000;
+                        font-family: 'Courier New', monospace;
+                    ">BEZ INTERNETU</h1>
+                    
+                    <p style="
+                        color: #ffaaaa;
+                        font-size: 1.1em;
+                        margin-bottom: 20px;
+                        line-height: 1.6;
+                    ">
+                        Brak połączenia internetowego!<br/>
+                        Sprawdź swoją sieć i spróbuj ponownie.
+                    </p>
+                    
+                    <div style="
+                        background: #1a1a1a;
+                        border: 2px solid #ff3333;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin: 20px 0;
+                        font-family: monospace;
+                        color: #ffff00;
+                    ">
+                        STATUS: OFFLINE ⚠️
+                    </div>
+                    
+                    <div style="
+                        color: #00ffff;
+                        font-size: 0.9em;
+                        margin-top: 20px;
+                    ">
+                        ⏱️ Czekanie na połączenie...
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(offlineModal);
+        }
+        
+        function hideOfflineModal() {
+            const offlineModal = document.getElementById('offlineModal');
+            if (offlineModal) {
+                offlineModal.style.display = 'none';
+                setTimeout(() => offlineModal.remove(), 500);
+            }
+        }
 
         // Initialize authorized emails list
         function initializeAuthorizedEmails() {
@@ -1379,6 +1492,13 @@
         
         // Start GitHub OAuth flow
         function startGitHubLogin() {
+            // Sprawdzenie internetu
+            if (!navigator.onLine) {
+                alert('❌ Brak internetu! Nie można się zalogować.');
+                showOfflineModal();
+                return;
+            }
+            
             if (GITHUB_CLIENT_ID === 'YOUR_GITHUB_CLIENT_ID') {
                 alert('⚠️ GitHub OAuth not configured. Please set up GitHub OAuth app first.');
                 console.error('GitHub Client ID not configured');
@@ -1467,6 +1587,14 @@
                 loginModal.innerHTML = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0a0e27; border: 2px solid #00ff00; padding: 30px; border-radius: 10px; color: #00ff00; text-align: center;"><p>🐙 Logging in with GitHub...</p></div>';
             }
             
+            // Sprawdzenie internetu
+            if (!navigator.onLine) {
+                alert('❌ Brak internetu! Nie można połączyć się z serwerem.');
+                showOfflineModal();
+                location.reload();
+                return;
+            }
+            
             // Call backend to exchange code for token
             fetch(backendURL, {
                 method: 'POST',
@@ -1489,7 +1617,15 @@
             })
             .catch(error => {
                 console.error('❌ GitHub token exchange failed:', error);
-                alert('❌ Failed to log in with GitHub: ' + error.message);
+                
+                // Sprawdzenie czy to błąd sieci
+                if (!navigator.onLine) {
+                    alert('❌ Brak internetu! Sprawdź swoją sieć i spróbuj ponownie.');
+                    showOfflineModal();
+                } else {
+                    alert('❌ Błąd logowania: ' + error.message + '\n\nSprawnozeni połączenie i spróbuj ponownie.');
+                }
+                
                 location.reload();
             });
         }
