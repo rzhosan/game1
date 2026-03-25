@@ -2021,7 +2021,6 @@
                 
                 loginUserFinal(user);
             }
-        }
             alert('✅ Zalogowany!');
         }
         
@@ -2287,7 +2286,16 @@
 
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
-                window.location.href = '/logout.html';
+                // Usuń tylko aktualnego użytkownika, ale zachowaj hasła!
+                localStorage.removeItem(CURRENT_USER_KEY);
+                localStorage.removeItem(TWO_FA_ENABLED_KEY);
+                localStorage.removeItem(TWO_FA_SECRET_KEY);
+                
+                // NIE usuwaj USER_PASSWORDS_KEY - hasła powinny zostać zapamiętane na stałe
+                console.log('✅ Wylogowano. Hasła pozostały zapamiętane.');
+                
+                // Przeładuj stronę
+                location.reload();
             }
         }
 
