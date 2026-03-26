@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystals Finder - Mark's Arcades</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2d1b4e 0%, #3d2d5f 25%, #1a3a3a 50%, #2d3f3f 75%, #3d2d5f 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: #00ff00;
+            text-shadow: 2px 2px #ff00ff;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5em, 5vw, 2.5em);
+            margin-bottom: 10px;
+            font-family: 'Press Start 2P', Arial, sans-serif;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: #00ff00;
+            border: 2px solid #00ff00;
+            color: #000;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-family: 'Press Start 2P', Arial, sans-serif;
+            font-size: clamp(0.7em, 2vw, 1em);
+        }
+
+        .back-button:hover {
+            background: #ffff00;
+            border-color: #ffff00;
+            transform: translate(-3px, -3px);
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
+        }
+
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            padding-bottom: 130%;
+            height: 0;
+            overflow: visible;
+            border: 3px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+
+            .iframe-container {
+                padding-bottom: 150%;
+                border-width: 2px;
+            }
+
+            .header h1 {
+                margin-bottom: 5px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .header {
+                display: none;
+            }
+
+            .iframe-container {
+                max-width: none;
+                padding-bottom: 140%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← BACK</a>
+    
+    <div class="game-container">
+        <div class="header">
+            <h1>💎 CRYSTALS FINDER 💎</h1>
+        </div>
+        
+        <div class="iframe-container">
+            <iframe src="https://arcade.makecode.com/---run?id=_2jpLLM2A0dmp" allowfullscreen="allowfullscreen" sandbox="allow-popups allow-forms allow-scripts allow-same-origin"></iframe>
+        </div>
+    </div>
+</body>
+</html>
