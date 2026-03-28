@@ -86,6 +86,55 @@
                 text-align: center;
             }
         }
+
+        .ip-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        .ip-text {
+            color: #4caf50;
+            font-size: 1.5em;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            background-color: rgba(76, 175, 80, 0.1);
+            padding: 10px 15px;
+            border: 2px solid #4caf50;
+            border-radius: 5px;
+        }
+
+        .copy-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .copy-btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+        }
+
+        .copy-btn:active {
+            transform: scale(0.98);
+        }
+
+        .copy-feedback {
+            color: #4caf50;
+            font-size: 0.9em;
+            min-height: 20px;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -101,6 +150,26 @@
             </div>
         </div>
         <p class="description">Witaj na serwerze Minecraft!</p>
+        <div class="ip-container">
+            <span class="ip-text" id="ipText">204.168.163.56</span>
+            <button class="copy-btn" onclick="copyIP()">Copy</button>
+            <span class="copy-feedback" id="copyFeedback"></span>
+        </div>
     </div>
+
+    <script>
+        function copyIP() {
+            const ipText = document.getElementById('ipText').textContent;
+            navigator.clipboard.writeText(ipText).then(() => {
+                const feedback = document.getElementById('copyFeedback');
+                feedback.textContent = '✓ Skopiowano!';
+                setTimeout(() => {
+                    feedback.textContent = '';
+                }, 2000);
+            }).catch(() => {
+                alert('Błąd przy kopiowaniu');
+            });
+        }
+    </script>
 </body>
 </html>
