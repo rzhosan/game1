@@ -267,6 +267,17 @@ alert(plese login in game.zhasan.online to play this game)
       </button>
     </div>
 
+    <!-- CHEAT DETECTION OVERLAY -->
+    <div id="cheatOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; justify-content:center; align-items:center;">
+      <div style="background:#ff4444; padding:40px; border-radius:10px; text-align:center; color:white; max-width:500px;">
+        <div style="font-size:48px; margin-bottom:20px;">❌</div>
+        <h1 style="margin:0 0 20px 0;">OSZUSTWO WYKRYTE!</h1>
+        <p style="font-size:18px; margin:0 0 15px 0;">Próbowałeś użyć konsolę programisty.</p>
+        <p style="font-size:16px; margin:0 0 15px 0;">Twoje konto zostało zablokowane na tej grze.</p>
+        <p style="font-size:14px; margin:0;">Kontakt: admin@zhasan.online</p>
+      </div>
+    </div>
+
     <!-- GRA -->
     <div id="gameArea" class="game-area">
       <h2 id="gameTitle"></h2>
@@ -304,6 +315,18 @@ alert(plese login in game.zhasan.online to play this game)
         cheaters.push(email);
         localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
       }
+      
+      // Pokaż overlay i zablokuj interfejs
+      const overlay = document.getElementById('cheatOverlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+      }
+      
+      // Zablokuj wszystko
+      document.body.style.pointerEvents = 'none';
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('menu').classList.remove('show');
+      document.getElementById('gameArea').classList.remove('active');
     }
 
     // Funkcja do sprawdzenia czy gracz jest zablokowany
@@ -314,78 +337,137 @@ alert(plese login in game.zhasan.online to play this game)
 
     // Funkcja do monitorowania zmiennej liczba
     function setupCheatDetection() {
-      let liczbaValue = 0;
-      
-      // Tworzymy obiekt proxy dla liczba
-      Object.defineProperty(window, '_liczba', {
-        get: function() {
-          return liczbaValue;
-        },
-        set: function(newValue) {
-          liczbaValue = newValue;
-        }
-      });
+      let devtoolsOpen = false;
 
-      // Monitorujemy dostęp do window.liczba
-      Object.defineProperty(window, 'liczba', {
-        get: function() {
-          // Sprawdzenie czy dostęp pochodzi z konsoli/debuggera
-          const stack = new Error().stack;
-          if (stack && (stack.includes('eval') || stack.includes('<anonymous>'))) {
-            // Potencjalny cheat
-            if (isLoggedIn && trenutniKorisnik) {
-              blockCheater(trenutniKorisnik.email);
-              alert('❌ OSZUSTWO WYKRYTE!\n\nPróbowałeś sprawdzić liczbę w konsoli programisty.\nTwoje konto zostało zablokowane na tej grze!\n\nKontakt: admin@zhasan.online');
-              logout();
-            }
+      // Metoda 1: Detektuj poprzez console.time
+      const originalConsoleTime = console.time;
+      Object.defineProperty(console, 'time', {
+        value: function() {
+          if (isLoggedIn && trenutniKorisnik) {
+            blockCheater(trenutniKorisnik.email);
           }
-          return liczbaValue;
-        },
-        set: function(newValue) {
-          liczbaValue = newValue;
-        }
-      });
-    }
-
-    // Funkcja do blokowania dostępu do console
-    function disableConsoleAccess() {
-      // Wyłącz console methods
-      const noop = () => undefined;
-      console.log = noop;
-      console.warn = noop;
-      console.error = noop;
-      console.debug = noop;
-
-      // Monitoruj otwarcie DevTools poprzez kombinacje klawiszy
-      document.addEventListener('keydown', function(event) {
-        // F12
-        if (event.keyCode === 123) {
-          event.preventDefault();
-          alert('⚠️ Konsola programisty jest wyłączona w tej grze!');
-          return false;
-        }
-        // Ctrl+Shift+I
-        if (event.ctrlKey && event.shiftKey && event.keyCode === 73) {
-          event.preventDefault();
-          alert('⚠️ Konsola programisty jest wyłączona w tej grze!');
-          return false;
-        }
-        // Ctrl+Shift+J
-        if (event.ctrlKey && event.shiftKey && event.keyCode === 74) {
-          event.preventDefault();
-          alert('⚠️ Konsola programisty jest wyłączona w tej grze!');
-          return false;
+          return originalConsoleTime.apply(console, arguments);
         }
       });
 
-      // Monitoruj czy user spróbował używać debuggera
-      window.addEventListener('beforeunload', function() {
-        if (window.devtools && window.devtools.open) {
+      // Metoda 2: Monitoruj próby dostępu do undefined zmiennych
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        if (msg && msg.includes('liczba')) {
           if (isLoggedIn && trenutniKorisnik) {
             blockCheater(trenutniKorisnik.email);
           }
         }
+        return false;
+      };
+
+      // Metoda 3: Monitoruj resize okna (DevTools)
+      let lastInnerHeight = window.innerHeight;
+      let lastInnerWidth = window.innerWidth;
+      let resizeAttempts = 0;
+
+      window.addEventListener('resize', function() {
+        const heightDiff = Math.abs(window.innerHeight - lastInnerHeight);
+        const widthDiff = Math.abs(window.innerWidth - lastInnerWidth);
+
+        // Jeśli drastyczna zmiana wielkości
+        if ((heightDiff > 100 || widthDiff > 100) && resizeAttempts < 3) {
+          resizeAttempts++;
+          if (resizeAttempts >= 2 && isLoggedIn && trenutniKorisnik) {
+            blockCheater(trenutniKorisnik.email);
+          }
+        }
+
+        lastInnerHeight = window.innerHeight;
+        lastInnerWidth = window.innerWidth;
       });
+
+      // Metoda 4: Blokuj eval i Function constructor
+      window.eval = function() {
+        if (isLoggedIn && trenutniKorisnik) {
+          blockCheater(trenutniKorisnik.email);
+        }
+        throw new Error('Not allowed');
+      };
+
+      // Metoda 5: Monitoruj próby logowania
+      const originalLog = console.log;
+      console.log = function() {
+        if (isLoggedIn && trenutniKorisnik && arguments.length > 0) {
+          const arg = String(arguments[0]);
+          if (arg.includes('liczba') || arg.includes('window.liczba')) {
+            blockCheater(trenutniKorisnik.email);
+          }
+        }
+      };
+    }
+
+    // Zaawansowana funkcja do blokowania dostępu do console
+    function disableConsoleAccess() {
+      // Monitoruj próby otwarcia DevTools
+      const handler = (e) => {
+        if (e.keyCode === 123 || 
+            (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
+            (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
+            (e.ctrlKey && e.keyCode === 85)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          
+          if (isLoggedIn && trenutniKorisnik) {
+            blockCheater(trenutniKorisnik.email);
+          }
+          return false;
+        }
+      };
+
+      // Dodaj listener z capture phase
+      document.addEventListener('keydown', handler, true);
+      window.addEventListener('keydown', handler, true);
+      document.body.addEventListener('keydown', handler, true);
+      
+      // Wyłącz prawy klik
+      document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }, true);
+
+      // Monitoruj otwarcie DevTools poprzez detekt rozmiaru okna
+      let lastWindowWidth = window.innerWidth;
+      let lastWindowHeight = window.innerHeight;
+      let suspiciousResizes = 0;
+
+      window.addEventListener('resize', () => {
+        const widthDiff = Math.abs(window.innerWidth - lastWindowWidth);
+        const heightDiff = Math.abs(window.innerHeight - lastWindowHeight);
+        
+        // Jeśli okno zmniejszyło się drastycznie - DevTools mogą być otwarte
+        if (widthDiff > 100 || heightDiff > 100) {
+          suspiciousResizes++;
+          if (suspiciousResizes >= 1 && isLoggedIn && trenutniKorisnik) {
+            blockCheater(trenutniKorisnik.email);
+          }
+        }
+        
+        lastWindowWidth = window.innerWidth;
+        lastWindowHeight = window.innerHeight;
+      }, true);
+
+      // Blokuj console methods
+      try {
+        Object.defineProperty(window, 'console', {
+          value: {},
+          writable: false
+        });
+      } catch(e) {}
+
+      // Zamrozić console
+      try {
+        console.log = () => {};
+        console.warn = () => {};
+        console.error = () => {};
+        console.debug = () => {};
+      } catch(e) {}
     }
 
     // Google Sign-In Callback
