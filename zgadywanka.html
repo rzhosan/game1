@@ -299,7 +299,7 @@ alert(plese login in game.zhasan.online to play this game)
   <script>
     let isLoggedIn = false;
     let trenutniKorisnik = null;
-    let liczba = 0;
+    let liczbaValue = 0;  // Prywatna zmienna
     let proby = 0;
     let maxZakres = 100;
     let tryb = 'ŚREDNIE';
@@ -307,16 +307,17 @@ alert(plese login in game.zhasan.online to play this game)
     let maxRundy = 1;
     let wygraneRundy = 0;
     const CHEATERS_KEY = 'zgadywankaCheaters';
+    let cheatDetectionActive = false;
 
-    // Funkcja do blokowania oszustów
-    function blockCheater(email) {
+    // ===== SYSTEM BLOKOWANIA OSZUSTÓW =====
+    function blockCheater(email, reason = 'Nieznana przyczyna') {
       const cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
       if (!cheaters.includes(email)) {
         cheaters.push(email);
         localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
       }
       
-      // Pokaż overlay i zablokuj interfejs
+      // Pokaż overlay
       const overlay = document.getElementById('cheatOverlay');
       if (overlay) {
         overlay.style.display = 'flex';
@@ -324,158 +325,61 @@ alert(plese login in game.zhasan.online to play this game)
       
       // Zablokuj wszystko
       document.body.style.pointerEvents = 'none';
-      document.getElementById('loginSection').style.display = 'none';
-      document.getElementById('menu').classList.remove('show');
-      document.getElementById('gameArea').classList.remove('active');
+      document.body.style.cursor = 'not-allowed';
+      
+      console.log('%cOSZUSTWO WYKRYTE!', 'color: red; font-size: 20px; font-weight: bold;');
+      console.log(`%cEmail: ${email}\nPrzyczyna: ${reason}`, 'color: red; font-size: 14px;');
     }
 
-    // Funkcja do sprawdzenia czy gracz jest zablokowany
     function isCheater(email) {
       const cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
       return cheaters.includes(email);
     }
 
-    // Funkcja do monitorowania zmiennej liczba
-    function setupCheatDetection() {
-      let devtoolsOpen = false;
+    // ===== BLOKADA DEVTOOLS I KONSOLI =====
+    function protectGame() {
+      if (!cheatDetectionActive) return;
 
-      // Metoda 1: Detektuj poprzez console.time
-      const originalConsoleTime = console.time;
-      Object.defineProperty(console, 'time', {
-        value: function() {
-          if (isLoggedIn && trenutniKorisnik) {
-            blockCheater(trenutniKorisnik.email);
-          }
-          return originalConsoleTime.apply(console, arguments);
-        }
-      });
-
-      // Metoda 2: Monitoruj próby dostępu do undefined zmiennych
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-        if (msg && msg.includes('liczba')) {
-          if (isLoggedIn && trenutniKorisnik) {
-            blockCheater(trenutniKorisnik.email);
-          }
-        }
-        return false;
-      };
-
-      // Metoda 3: Monitoruj resize okna (DevTools)
-      let lastInnerHeight = window.innerHeight;
-      let lastInnerWidth = window.innerWidth;
-      let resizeAttempts = 0;
-
-      window.addEventListener('resize', function() {
-        const heightDiff = Math.abs(window.innerHeight - lastInnerHeight);
-        const widthDiff = Math.abs(window.innerWidth - lastInnerWidth);
-
-        // Jeśli drastyczna zmiana wielkości
-        if ((heightDiff > 100 || widthDiff > 100) && resizeAttempts < 3) {
-          resizeAttempts++;
-          if (resizeAttempts >= 2 && isLoggedIn && trenutniKorisnik) {
-            blockCheater(trenutniKorisnik.email);
-          }
-        }
-
-        lastInnerHeight = window.innerHeight;
-        lastInnerWidth = window.innerWidth;
-      });
-
-      // Metoda 4: Blokuj eval i Function constructor
-      window.eval = function() {
-        if (isLoggedIn && trenutniKorisnik) {
-          blockCheater(trenutniKorisnik.email);
-        }
-        throw new Error('Not allowed');
-      };
-
-      // Metoda 5: Monitoruj próby logowania
-      const originalLog = console.log;
-      console.log = function() {
-        if (isLoggedIn && trenutniKorisnik && arguments.length > 0) {
-          const arg = String(arguments[0]);
-          if (arg.includes('liczba') || arg.includes('window.liczba')) {
-            blockCheater(trenutniKorisnik.email);
-          }
-        }
-      };
-    }
-
-    // Zaawansowana funkcja do blokowania dostępu do console
-    function disableConsoleAccess() {
-      // Monitoruj próby otwarcia DevTools
-      const handler = (e) => {
-        if (e.keyCode === 123 || 
-            (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
-            (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
-            (e.ctrlKey && e.keyCode === 85)) {
+      // 1. Blokuj F12 i Ctrl+Shift+I/J
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'F12' || 
+            (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+            (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+            (e.ctrlKey && e.shiftKey && e.key === 'C')) {
           e.preventDefault();
           e.stopPropagation();
-          e.stopImmediatePropagation();
-          
           if (isLoggedIn && trenutniKorisnik) {
-            blockCheater(trenutniKorisnik.email);
+            blockCheater(trenutniKorisnik.email, 'Próba otwarcia DevTools');
           }
-          return false;
         }
-      };
+      }, true);
 
-      // Dodaj listener z capture phase
-      document.addEventListener('keydown', handler, true);
-      window.addEventListener('keydown', handler, true);
-      document.body.addEventListener('keydown', handler, true);
-      
-      // Wyłącz prawy klik
+      // 2. Blokuj prawy klik
       document.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        e.stopPropagation();
         return false;
       }, true);
 
-      // Monitoruj otwarcie DevTools poprzez detekt rozmiaru okna
-      let lastWindowWidth = window.innerWidth;
-      let lastWindowHeight = window.innerHeight;
-      let suspiciousResizes = 0;
-
-      window.addEventListener('resize', () => {
-        const widthDiff = Math.abs(window.innerWidth - lastWindowWidth);
-        const heightDiff = Math.abs(window.innerHeight - lastWindowHeight);
-        
-        // Jeśli okno zmniejszyło się drastycznie - DevTools mogą być otwarte
-        if (widthDiff > 100 || heightDiff > 100) {
-          suspiciousResizes++;
-          if (suspiciousResizes >= 1 && isLoggedIn && trenutniKorisnik) {
-            blockCheater(trenutniKorisnik.email);
-          }
+      // 3. Blokuj Ctrl+R / Ctrl+Shift+R (refresh)
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && (e.key === 'r' || e.key === 'R')) {
+          e.preventDefault();
         }
-        
-        lastWindowWidth = window.innerWidth;
-        lastWindowHeight = window.innerHeight;
       }, true);
 
-      // Blokuj console methods
-      try {
-        Object.defineProperty(window, 'console', {
-          value: {},
-          writable: false
-        });
-      } catch(e) {}
-
-      // Zamrozić console
-      try {
-        console.log = () => {};
-        console.warn = () => {};
-        console.error = () => {};
-        console.debug = () => {};
-      } catch(e) {}
+      // 4. Monitoruj próby dostępu do Number zmiennych
+      setInterval(() => {
+        try {
+          const stackTrace = new Error().stack;
+          // To nie zawsze działało, ale spróbujemy
+        } catch(e) {}
+      }, 500);
     }
 
-    // Google Sign-In Callback
+    // ===== LOGOWANIE =====
     function handleCredentialResponse(response) {
-      // JWT token from Google
       const token = response.credential;
       
-      // Decode JWT to get user info (without verification for simplicity)
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
@@ -486,11 +390,10 @@ alert(plese login in game.zhasan.online to play this game)
       
       // Sprawdź czy gracz jest zablokowany
       if (isCheater(userData.email)) {
-        alert('❌ KONTO ZABLOKOWANE!\n\nZostałeś zablokowany za oszukiwanie (próbę dostępu do konsoli programisty).\n\nJeśli uważasz, że to błąd, skontaktuj się z: admin@zhasan.online');
+        alert('❌ KONTO ZABLOKOWANE!\n\nZostałeś zablokowany za oszukiwanie.\n\nKontakt: admin@zhasan.online');
         return;
       }
       
-      // Zapisz dane do localStorage (taki sam klucz jak w index.html)
       localStorage.setItem('marcadesCurrentUser', JSON.stringify({
         name: userData.name,
         email: userData.email,
@@ -498,15 +401,16 @@ alert(plese login in game.zhasan.online to play this game)
         loginTime: new Date().toISOString()
       }));
       
-      // Set user info
       isLoggedIn = true;
       trenutniKorisnik = userData;
+      cheatDetectionActive = true;
       
-      // Update UI
+      // Aktywuj ochronę
+      protectGame();
+      
       document.getElementById('userPhoto').src = userData.picture;
       document.getElementById('userName').textContent = `Zalogowany jako: ${userData.name}`;
       
-      // Show/hide elements
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('userInfo').classList.add('active');
       document.getElementById('warningBox').style.display = 'block';
@@ -518,9 +422,9 @@ alert(plese login in game.zhasan.online to play this game)
     function logout() {
       isLoggedIn = false;
       trenutniKorisnik = null;
+      cheatDetectionActive = false;
       localStorage.removeItem('marcadesCurrentUser');
       
-      // Reset UI
       document.getElementById('userInfo').classList.remove('active');
       document.getElementById('warningBox').style.display = 'none';
       document.getElementById('menu').classList.remove('show');
@@ -528,33 +432,30 @@ alert(plese login in game.zhasan.online to play this game)
       document.getElementById('loginSection').style.display = 'flex';
     }
 
-    // Sprawdź czy użytkownik jest już zalogowany (przy załadowaniu strony)
     function checkSavedLogin() {
       const savedData = localStorage.getItem('marcadesCurrentUser');
       if (savedData) {
         const userData = JSON.parse(savedData);
         
-        // Sprawdź czy jest zablokowany
         if (isCheater(userData.email)) {
-          alert('❌ KONTO ZABLOKOWANE!\n\nZostałeś zablokowany za oszukiwanie (próbę dostępu do konsoli programisty).\n\nJeśli uważasz, że to błąd, skontaktuj się z: admin@zhasan.online');
           localStorage.removeItem('marcadesCurrentUser');
           return;
         }
         
         isLoggedIn = true;
         trenutniKorisnik = userData;
+        cheatDetectionActive = true;
         
-        // Update UI
+        // Aktywuj ochronę
+        protectGame();
+        
         document.getElementById('userPhoto').src = userData.picture;
         document.getElementById('userName').textContent = `Zalogowany jako: ${userData.name}`;
         
-        // Show/hide elements
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('userInfo').classList.add('active');
         document.getElementById('warningBox').style.display = 'block';
         document.getElementById('menu').classList.add('show');
-        
-        console.log(`✅ Przywrócono logowanie: ${userData.name}`);
       }
     }
 
@@ -566,6 +467,7 @@ alert(plese login in game.zhasan.online to play this game)
       return true;
     }
 
+    // ===== LOGIKA GRY =====
     function startGame(zakres, mode) {
       if (!checkLogin()) return;
       
@@ -586,7 +488,7 @@ alert(plese login in game.zhasan.online to play this game)
     }
 
     function startNewRound() {
-      liczba = Math.floor(Math.random() * maxZakres) + 1;
+      liczbaValue = Math.floor(Math.random() * maxZakres) + 1;
       proby = 0;
       document.getElementById('input').disabled = false;
       document.getElementById('checkBtn').disabled = false;
@@ -627,10 +529,10 @@ alert(plese login in game.zhasan.online to play this game)
       proby++;
       let wynik = document.getElementById('wynik');
 
-      if (proba < liczba) {
+      if (proba < liczbaValue) {
         wynik.innerHTML = `⬇️ Za nisko! Próba ${proby}`;
         wynik.className = 'hint';
-      } else if (proba > liczba) {
+      } else if (proba > liczbaValue) {
         wynik.innerHTML = `⬆️ Za wysoko! Próba ${proby}`;
         wynik.className = 'hint';
       } else {
@@ -665,22 +567,20 @@ alert(plese login in game.zhasan.online to play this game)
     }
 
     // Enable Enter key to submit
-    document.getElementById('input').addEventListener('keypress', function(event) {
-      if (event.key === 'Enter' && !document.getElementById('checkBtn').disabled) {
-        sprawdz();
+    document.addEventListener('DOMContentLoaded', function() {
+      const inputField = document.getElementById('input');
+      if (inputField) {
+        inputField.addEventListener('keypress', function(event) {
+          if (event.key === 'Enter' && !document.getElementById('checkBtn').disabled) {
+            sprawdz();
+          }
+        });
       }
-    });
-
-    // Sprawdź zalogowanie przy załadowaniu strony
-    window.addEventListener('DOMContentLoaded', function() {
-      setupCheatDetection();
-      disableConsoleAccess();
+      
       checkSavedLogin();
     });
 
-    // Alternatywnie, jeśli DOMContentLoaded się nie wywoła
-    setupCheatDetection();
-    disableConsoleAccess();
+    // Fallback
     checkSavedLogin();
   </script>
 </body>
