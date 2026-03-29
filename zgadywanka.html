@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zgadywanka - Gra z Zadaniami</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * {
       margin: 0;
@@ -139,14 +140,113 @@
     .back-button:hover {
       background-color: #7f8c8d;
     }
+
+    #loginSection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    #loginSection h2 {
+      margin-bottom: 10px;
+    }
+
+    .google-button-wrapper {
+      transform: scale(1.2);
+      transform-origin: center;
+    }
+
+    #userInfo {
+      display: none;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #userInfo.active {
+      display: block;
+    }
+
+    #userInfo img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+
+    #userName {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .logout-btn {
+      padding: 8px 20px;
+      font-size: 14px;
+      background-color: #e74c3c;
+      margin-top: 10px;
+    }
+
+    .logout-btn:hover {
+      background-color: #c0392b;
+    }
+
+    .warning-box {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px 0;
+      color: #856404;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .warning-box strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .menu-active {
+      display: none;
+    }
+
+    .menu-active.show {
+      display: block;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🎮 Zgadywanka</h1>
 
+    <!-- LOGIN SECTION -->
+    <div id="loginSection">
+      <h2>Zaloguj się przez Google</h2>
+      <p>Aby grać, musisz się zalogować</p>
+      <div id="g_id_onload"
+           data-client_id="YOUR_GOOGLE_CLIENT_ID"
+           data-callback="handleCredentialResponse">
+      </div>
+      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"></div>
+    </div>
+
+    <!-- USER INFO -->
+    <div id="userInfo">
+      <img id="userPhoto" src="" alt="Zdjęcie profilowe">
+      <div id="userName"></div>
+      <button class="logout-btn" onclick="logout()">Wyloguj się</button>
+    </div>
+
+    <!-- WARNING MESSAGE -->
+    <div id="warningBox" class="warning-box" style="display: none;">
+      <strong>⚠️ Ważne:</strong>
+      Nie sprawdzaj liczby w konsoli programisty (F12)! To zepsuje grę i przyjmę to jako oszukiwanie. Graj uczciwnie i ciesz się zabawą!
+    </div>
+
     <!-- MENU -->
-    <div id="menu">
+    <div id="menu" class="menu-active">
       <h2>Wybierz zadanie:</h2>
       <button class="menu-button" onclick="startGame(10, 'ŁATWE')">
         ⭐ ŁATWE
@@ -185,6 +285,8 @@
   </div>
 
   <script>
+    let isLoggedIn = false;
+    let trenutniKorisnik = null;
     let liczba = 0;
     let proby = 0;
     let maxZakres = 100;
@@ -193,7 +295,58 @@
     let maxRundy = 1;
     let wygraneRundy = 0;
 
+    // Google Sign-In Callback
+    function handleCredentialResponse(response) {
+      // JWT token from Google
+      const token = response.credential;
+      
+      // Decode JWT to get user info (without verification for simplicity)
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const userData = JSON.parse(jsonPayload);
+      
+      // Set user info
+      isLoggedIn = true;
+      trenutniKorisnik = userData;
+      
+      // Update UI
+      document.getElementById('userPhoto').src = userData.picture;
+      document.getElementById('userName').textContent = `Zalogowany jako: ${userData.name}`;
+      
+      // Show/hide elements
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('userInfo').classList.add('active');
+      document.getElementById('warningBox').style.display = 'block';
+      document.getElementById('menu').classList.add('show');
+    }
+
+    function logout() {
+      isLoggedIn = false;
+      trenutniKorisnik = null;
+      
+      // Reset UI
+      document.getElementById('userInfo').classList.remove('active');
+      document.getElementById('warningBox').style.display = 'none';
+      document.getElementById('menu').classList.remove('show');
+      document.getElementById('gameArea').classList.remove('active');
+      document.getElementById('loginSection').style.display = 'flex';
+    }
+
+    function checkLogin() {
+      if (!isLoggedIn) {
+        alert('Musisz się zalogować przez Google, aby grać!');
+        return false;
+      }
+      return true;
+    }
+
     function startGame(zakres, mode) {
+      if (!checkLogin()) return;
+      
       maxZakres = zakres;
       tryb = mode;
       rundy = 1;
@@ -206,7 +359,7 @@
       }
 
       startNewRound();
-      document.getElementById('menu').style.display = 'none';
+      document.getElementById('menu').classList.remove('show');
       document.getElementById('gameArea').classList.add('active');
     }
 
@@ -284,7 +437,7 @@
 
     function backToMenu() {
       document.getElementById('gameArea').classList.remove('active');
-      document.getElementById('menu').style.display = 'block';
+      document.getElementById('menu').classList.add('show');
       rundy = 1;
       wygraneRundy = 0;
     }
