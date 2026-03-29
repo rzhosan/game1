@@ -951,12 +951,96 @@
                 if (ADMIN_EMAILS.includes(currentUser.email)) {
                     document.getElementById('settingsBtn').classList.add('show');
                 }
+                
+                // Pokaż komunikat o zalogowaniu
+                setTimeout(() => {
+                    showLoginWelcomeMessage(currentUser);
+                }, 1000);
             } else {
                 document.getElementById('loginModal').style.display = 'flex';
                 if (container) container.style.display = 'none';
                 if (banner) banner.style.display = 'none';
                 document.getElementById('logoutBtn').classList.remove('show');
             }
+        }
+
+        // Komunikat powitający użytkownika
+        function showLoginWelcomeMessage(user) {
+            // Sprawdź czy wiadomość już była wyświetlona
+            const lastMessageTime = sessionStorage.getItem('loginMessageTime');
+            const now = Date.now();
+            
+            // Pokaż komunikat tylko raz na sesję (co 10 minut)
+            if (lastMessageTime && now - parseInt(lastMessageTime) < 60000) {
+                return;
+            }
+            
+            // Utwórz element komunikatu
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'loginWelcomeMessage';
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+                color: #000;
+                padding: 20px 30px;
+                border-radius: 10px;
+                box-shadow: 0 0 30px rgba(0, 255, 0, 0.6);
+                z-index: 10000;
+                font-weight: bold;
+                font-size: 16px;
+                max-width: 400px;
+                word-wrap: break-word;
+                animation: slideIn 0.5s ease-in-out;
+            `;
+            
+            messageDiv.innerHTML = `
+                <div style="margin-bottom: 10px;">✅ Zalogowany pomyślnie!</div>
+                <div style="font-size: 14px; opacity: 0.9;">Użytkownik: ${user.name || user.email}</div>
+            `;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Dodaj animację CSS jeśli nie istnieje
+            if (!document.getElementById('loginMessageStyles')) {
+                const style = document.createElement('style');
+                style.id = 'loginMessageStyles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from {
+                            transform: translateX(500px);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                    }
+                    @keyframes slideOut {
+                        from {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                        to {
+                            transform: translateX(500px);
+                            opacity: 0;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Zapisz czas wyświetlenia
+            sessionStorage.setItem('loginMessageTime', now.toString());
+            
+            // Ukryj komunikat po 5 sekundach
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideOut 0.5s ease-in-out';
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 500);
+            }, 5000);
         }
 
         // Quick Email Login

@@ -309,6 +309,14 @@
 
       const userData = JSON.parse(jsonPayload);
       
+      // Zapisz dane do localStorage (taki sam klucz jak w index.html)
+      localStorage.setItem('marcadesCurrentUser', JSON.stringify({
+        name: userData.name,
+        email: userData.email,
+        picture: userData.picture,
+        loginTime: new Date().toISOString()
+      }));
+      
       // Set user info
       isLoggedIn = true;
       trenutniKorisnik = userData;
@@ -322,11 +330,14 @@
       document.getElementById('userInfo').classList.add('active');
       document.getElementById('warningBox').style.display = 'block';
       document.getElementById('menu').classList.add('show');
+      
+      alert(`✅ Zalogowany jako ${userData.name}!`);
     }
 
     function logout() {
       isLoggedIn = false;
       trenutniKorisnik = null;
+      localStorage.removeItem('marcadesCurrentUser');
       
       // Reset UI
       document.getElementById('userInfo').classList.remove('active');
@@ -334,6 +345,28 @@
       document.getElementById('menu').classList.remove('show');
       document.getElementById('gameArea').classList.remove('active');
       document.getElementById('loginSection').style.display = 'flex';
+    }
+
+    // Sprawdź czy użytkownik jest już zalogowany (przy załadowaniu strony)
+    function checkSavedLogin() {
+      const savedData = localStorage.getItem('marcadesCurrentUser');
+      if (savedData) {
+        const userData = JSON.parse(savedData);
+        isLoggedIn = true;
+        trenutniKorisnik = userData;
+        
+        // Update UI
+        document.getElementById('userPhoto').src = userData.picture;
+        document.getElementById('userName').textContent = `Zalogowany jako: ${userData.name}`;
+        
+        // Show/hide elements
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('userInfo').classList.add('active');
+        document.getElementById('warningBox').style.display = 'block';
+        document.getElementById('menu').classList.add('show');
+        
+        console.log(`✅ Przywrócono logowanie: ${userData.name}`);
+      }
     }
 
     function checkLogin() {
@@ -448,6 +481,14 @@
         sprawdz();
       }
     });
+
+    // Sprawdź zalogowanie przy załadowaniu strony
+    window.addEventListener('DOMContentLoaded', function() {
+      checkSavedLogin();
+    });
+
+    // Alternatywnie, jeśli DOMContentLoaded się nie wywoła
+    checkSavedLogin();
   </script>
 </body>
 </html>
