@@ -295,6 +295,98 @@ alert(plese login in game.zhasan.online to play this game)
     let rundy = 1;
     let maxRundy = 1;
     let wygraneRundy = 0;
+    const CHEATERS_KEY = 'zgadywankaCheaters';
+
+    // Funkcja do blokowania oszustów
+    function blockCheater(email) {
+      const cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
+      if (!cheaters.includes(email)) {
+        cheaters.push(email);
+        localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
+      }
+    }
+
+    // Funkcja do sprawdzenia czy gracz jest zablokowany
+    function isCheater(email) {
+      const cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
+      return cheaters.includes(email);
+    }
+
+    // Funkcja do monitorowania zmiennej liczba
+    function setupCheatDetection() {
+      let liczbaValue = 0;
+      
+      // Tworzymy obiekt proxy dla liczba
+      Object.defineProperty(window, '_liczba', {
+        get: function() {
+          return liczbaValue;
+        },
+        set: function(newValue) {
+          liczbaValue = newValue;
+        }
+      });
+
+      // Monitorujemy dostęp do window.liczba
+      Object.defineProperty(window, 'liczba', {
+        get: function() {
+          // Sprawdzenie czy dostęp pochodzi z konsoli/debuggera
+          const stack = new Error().stack;
+          if (stack && (stack.includes('eval') || stack.includes('<anonymous>'))) {
+            // Potencjalny cheat
+            if (isLoggedIn && trenutniKorisnik) {
+              blockCheater(trenutniKorisnik.email);
+              alert('❌ OSZUSTWO WYKRYTE!\n\nPróbowałeś sprawdzić liczbę w konsoli programisty.\nTwoje konto zostało zablokowane na tej grze!\n\nKontakt: admin@zhasan.online');
+              logout();
+            }
+          }
+          return liczbaValue;
+        },
+        set: function(newValue) {
+          liczbaValue = newValue;
+        }
+      });
+    }
+
+    // Funkcja do blokowania dostępu do console
+    function disableConsoleAccess() {
+      // Wyłącz console methods
+      const noop = () => undefined;
+      console.log = noop;
+      console.warn = noop;
+      console.error = noop;
+      console.debug = noop;
+
+      // Monitoruj otwarcie DevTools poprzez kombinacje klawiszy
+      document.addEventListener('keydown', function(event) {
+        // F12
+        if (event.keyCode === 123) {
+          event.preventDefault();
+          alert('⚠️ Konsola programisty jest wyłączona w tej grze!');
+          return false;
+        }
+        // Ctrl+Shift+I
+        if (event.ctrlKey && event.shiftKey && event.keyCode === 73) {
+          event.preventDefault();
+          alert('⚠️ Konsola programisty jest wyłączona w tej grze!');
+          return false;
+        }
+        // Ctrl+Shift+J
+        if (event.ctrlKey && event.shiftKey && event.keyCode === 74) {
+          event.preventDefault();
+          alert('⚠️ Konsola programisty jest wyłączona w tej grze!');
+          return false;
+        }
+      });
+
+      // Monitoruj czy user spróbował używać debuggera
+      window.addEventListener('beforeunload', function() {
+        if (window.devtools && window.devtools.open) {
+          if (isLoggedIn && trenutniKorisnik) {
+            blockCheater(trenutniKorisnik.email);
+          }
+        }
+      });
+    }
 
     // Google Sign-In Callback
     function handleCredentialResponse(response) {
@@ -309,6 +401,12 @@ alert(plese login in game.zhasan.online to play this game)
       }).join(''));
 
       const userData = JSON.parse(jsonPayload);
+      
+      // Sprawdź czy gracz jest zablokowany
+      if (isCheater(userData.email)) {
+        alert('❌ KONTO ZABLOKOWANE!\n\nZostałeś zablokowany za oszukiwanie (próbę dostępu do konsoli programisty).\n\nJeśli uważasz, że to błąd, skontaktuj się z: admin@zhasan.online');
+        return;
+      }
       
       // Zapisz dane do localStorage (taki sam klucz jak w index.html)
       localStorage.setItem('marcadesCurrentUser', JSON.stringify({
@@ -353,6 +451,14 @@ alert(plese login in game.zhasan.online to play this game)
       const savedData = localStorage.getItem('marcadesCurrentUser');
       if (savedData) {
         const userData = JSON.parse(savedData);
+        
+        // Sprawdź czy jest zablokowany
+        if (isCheater(userData.email)) {
+          alert('❌ KONTO ZABLOKOWANE!\n\nZostałeś zablokowany za oszukiwanie (próbę dostępu do konsoli programisty).\n\nJeśli uważasz, że to błąd, skontaktuj się z: admin@zhasan.online');
+          localStorage.removeItem('marcadesCurrentUser');
+          return;
+        }
+        
         isLoggedIn = true;
         trenutniKorisnik = userData;
         
@@ -485,10 +591,14 @@ alert(plese login in game.zhasan.online to play this game)
 
     // Sprawdź zalogowanie przy załadowaniu strony
     window.addEventListener('DOMContentLoaded', function() {
+      setupCheatDetection();
+      disableConsoleAccess();
       checkSavedLogin();
     });
 
     // Alternatywnie, jeśli DOMContentLoaded się nie wywoła
+    setupCheatDetection();
+    disableConsoleAccess();
     checkSavedLogin();
   </script>
 </body>
