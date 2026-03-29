@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head><title>Zgadywanka</title></head>
-<body> <h1>Zgadnij liczbę od 1 do 100!</h1> <input type="number" id="input" min="1" max="100"> <button onclick="sprawdz">Sprawdź</button> <p id="wynik"></p> <script>  liczba = Math.floor(Math.random* 100) + 1; let proby = 0; function sprawdz{ let proba = parseInt(document.getElementById('input').value); proby++; let wynik = document.getElementById('wynik'); if (proba < liczba) wynik.innerHTML = `Za nisko! Próba ${proby}`; else if (proba > liczba) wynik.innerHTML = `Za wysoko! Próba ${proby}`; else wynik.innerHTML = `Brawo! Zgadłeś po ${proby} próbach!`; } </script>
+<body> <h1>Zgadnij liczbę od 1 do 100!</h1> <input type="number" id="input" min="1" max="100"> <button onclick="sprawdz()">Sprawdź</button> <p id="wynik"></p> <script>  let liczba = Math.floor(Math.random() * 100) + 1; let proby = 0; function sprawdz(){ let proba = parseInt(document.getElementById('input').value); proby++; let wynik = document.getElementById('wynik'); if (proba < liczba) wynik.innerHTML = `Za nisko! Próba ${proby}`; else if (proba > liczba) wynik.innerHTML = `Za wysoko! Próba ${proby}`; else wynik.innerHTML = `Brawo! Zgadłeś po ${proby} próbach!`; } </script>
 </body>
 </html>
 
