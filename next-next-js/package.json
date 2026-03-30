@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/package.json",
   "name": "marks-arcades",
   "version": "1.0.0",
   "description": "Arcade Game Portal with Server-Side Authentication",
