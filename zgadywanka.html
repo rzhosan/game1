@@ -1,4 +1,4 @@
-alert(plese login in game.zhasan.online to play this game)
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -216,9 +216,97 @@ alert(plese login in game.zhasan.online to play this game)
     .menu-active.show {
       display: block;
     }
+
+    /* Custom Alert Modal */
+    #customAlert {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #customAlert.show {
+      display: flex;
+    }
+
+    .alert-dialog {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .alert-dialog h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+
+    .alert-dialog p {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .alert-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .alert-btn {
+      padding: 12px 30px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .alert-btn-ok {
+      background-color: #667eea;
+      color: white;
+    }
+
+    .alert-btn-ok:hover {
+      background-color: #764ba2;
+      transform: translateY(-2px);
+    }
+
+    .alert-btn-go {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    .alert-btn-go:hover {
+      background-color: #229954;
+      transform: translateY(-2px);
+    }
   </style>
 </head>
 <body>
+  <!-- Custom Alert Modal -->
+  <div id="customAlert">
+    <div class="alert-dialog">
+      <h2>⚠️ Logowanie wymagane</h2>
+      <p>Zaloguj się na stronie game.zhasan.online aby grać</p>
+      <div class="alert-buttons">
+        <button class="alert-btn alert-btn-ok" onclick="closeAlert()">OK</button>
+        <button class="alert-btn alert-btn-go" onclick="goToLogin()">Przejdź</button>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
     <h1>🎮 Zgadywanka</h1>
 
@@ -577,8 +665,30 @@ alert(plese login in game.zhasan.online to play this game)
         });
       }
       
+      // Pokaż alert przy ładowaniu
+      showLoginAlert();
+      
       checkSavedLogin();
     });
+
+    // Funkcje alertu
+    function showLoginAlert() {
+      const alert = document.getElementById('customAlert');
+      if (alert) {
+        alert.classList.add('show');
+      }
+    }
+
+    function closeAlert() {
+      const alert = document.getElementById('customAlert');
+      if (alert) {
+        alert.classList.remove('show');
+      }
+    }
+
+    function goToLogin() {
+      window.location.href = 'https://game.zhasan.online';
+    }
 
     // Fallback
     checkSavedLogin();
