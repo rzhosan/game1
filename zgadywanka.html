@@ -324,14 +324,14 @@
       </button>
     </div>
 
-    <!-- CHEAT DETECTION OVERLAY -->
-    <div id="cheatOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; justify-content:center; align-items:center;">
-      <div style="background:#ff4444; padding:40px; border-radius:10px; text-align:center; color:white; max-width:500px;">
-        <div style="font-size:48px; margin-bottom:20px;">❌</div>
-        <h1 style="margin:0 0 20px 0;">OSZUSTWO WYKRYTE!</h1>
-        <p style="font-size:18px; margin:0 0 15px 0;">Próbowałeś użyć konsolę programisty.</p>
-        <p style="font-size:16px; margin:0 0 15px 0;">Twoje konto zostało zablokowane na tej grze.</p>
-        <p style="font-size:14px; margin:0;">Kontakt: zhasanmark2@gmail.com</p>
+    <!-- SESSION END OVERLAY -->
+    <div id="sessionEndOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center;">
+      <div style="background:white; padding:50px; border-radius:15px; text-align:center; color:#333; max-width:500px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="font-size:60px; margin-bottom:20px;">⚠️</div>
+        <h1 style="margin:0 0 20px 0; font-size:28px; color:#e74c3c;">SESJA ZAKOŃCZONA</h1>
+        <p style="font-size:18px; margin:0 0 15px 0; font-weight:bold;">You open console 🚨</p>
+        <p style="font-size:16px; margin:0 0 20px 0; color:#555;">Twoja sesja gry została zakończona. Zaloguj się ponownie, aby grać.</p>
+        <button onclick="redirectToLogin()" style="padding:15px 40px; font-size:16px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition: all 0.3s;" onmouseover="this.style.background='#764ba2'" onmouseout="this.style.background='#667eea'">Powrót do logowania</button>
       </div>
     </div>
 
@@ -368,24 +368,22 @@
 
     // ===== SYSTEM BLOKOWANIA OSZUSTÓW =====
     function blockCheater(email, reason = 'Nieznana przyczyna') {
-      const cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
-      if (!cheaters.includes(email)) {
-        cheaters.push(email);
-        localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
-      }
+      // USUŃ z listy zablokowanych (odmblokuj nawet jeśli byli zabanowani)
+      let cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
+      cheaters = cheaters.filter(e => e !== email);
+      localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
       
-      // Pokaż overlay
-      const overlay = document.getElementById('cheatOverlay');
+      // Pokaż popup sesji end
+      const overlay = document.getElementById('sessionEndOverlay');
       if (overlay) {
         overlay.style.display = 'flex';
       }
       
-      // Zablokuj wszystko
-      document.body.style.pointerEvents = 'none';
-      document.body.style.cursor = 'not-allowed';
+      // Wyloguj użytkownika
+      logout();
       
-      console.log('%cOSZUSTWO WYKRYTE!', 'color: red; font-size: 20px; font-weight: bold;');
-      console.log(`%cEmail: ${email}\nPrzyczyna: ${reason}`, 'color: red; font-size: 14px;');
+      console.log('%c⚠️ SESJA ZAKOŃCZONA - OTWARCIE KONSOLI', 'color: orange; font-size: 18px; font-weight: bold;');
+      console.log(`%cEmail: ${email}`, 'color: orange; font-size: 14px;');
     }
 
     function isCheater(email) {
@@ -424,13 +422,19 @@
         }
       }, true);
 
-      // 4. Monitoruj próby dostępu do Number zmiennych
+      // 4. Monitoruj konsole.log - detect console opening
+      const devtools = { open: false };
       setInterval(() => {
-        try {
-          const stackTrace = new Error().stack;
-          // To nie zawsze działało, ale spróbujemy
-        } catch(e) {}
-      }, 500);
+        const before = new Date().getTime();
+        debugger;
+        const after = new Date().getTime();
+        if (after - before > 100) {
+          devtools.open = true;
+          if (isLoggedIn && trenutniKorisnik) {
+            blockCheater(trenutniKorisnik.email, 'DevTools otworzone (debugger)');
+          }
+        }
+      }, 1000);
     }
 
     // ===== LOGOWANIE =====
@@ -445,11 +449,8 @@
 
       const userData = JSON.parse(jsonPayload);
       
-      // Sprawdź czy gracz jest zablokowany
-      if (isCheater(userData.email)) {
-        alert('❌ KONTO ZABLOKOWANE!\n\nZostałeś zablokowany za oszukiwanie.\n\nKontakt: zhasanmark2@gmail.com');
-        return;
-      }
+      // Nie blokuj zablokowanych - pozwól im zalogować się ponownie
+      // Zostali odblkowani po otwarciu konsoli
       
       localStorage.setItem('marcadesCurrentUser', JSON.stringify({
         name: userData.name,
@@ -494,11 +495,7 @@
       if (savedData) {
         const userData = JSON.parse(savedData);
         
-        if (isCheater(userData.email)) {
-          localStorage.removeItem('marcadesCurrentUser');
-          return;
-        }
-        
+        // Nie blokuj - pozwól grać nawet jeśli byli zabanowani
         isLoggedIn = true;
         trenutniKorisnik = userData;
         cheatDetectionActive = true;
@@ -656,6 +653,10 @@
     }
 
     function goToLogin() {
+      window.location.href = 'https://game.zhasan.online';
+    }
+
+    function redirectToLogin() {
       window.location.href = 'https://game.zhasan.online';
     }
 
