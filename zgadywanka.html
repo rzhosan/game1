@@ -687,13 +687,11 @@
     }
 
     function closeTab() {
-      // Spróbuj zamknąć kartę (działa tylko jeśli karty została otwarta przez JS)
+      // Wyloguj gracza
+      logout();
+      
+      // Natychmiast zamknij kartę
       window.close();
-      // Fallback: jeśli window.close() nie zadziała, po 100ms przekieruj na about:blank
-      setTimeout(() => {
-        logout();
-        window.location.href = 'about:blank';
-      }, 100);
     }
 
     function redirectToLogin() {
