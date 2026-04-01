@@ -331,10 +331,13 @@
     <div id="sessionEndOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center;">
       <div style="background:white; padding:50px; border-radius:15px; text-align:center; color:#333; max-width:500px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
         <div style="font-size:60px; margin-bottom:20px;">⚠️</div>
-        <h1 style="margin:0 0 20px 0; font-size:28px; color:#e74c3c;">SESJA ZAKOŃCZONA</h1>
-        <p style="font-size:18px; margin:0 0 15px 0; font-weight:bold;">You open console 🚨</p>
-        <p style="font-size:16px; margin:0 0 20px 0; color:#555;">Twoja sesja gry została zakończona. Zaloguj się ponownie, aby grać.</p>
-        <button onclick="redirectToLogin()" style="padding:15px 40px; font-size:16px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition: all 0.3s;" onmouseover="this.style.background='#764ba2'" onmouseout="this.style.background='#667eea'">Powrót do logowania</button>
+        <h1 style="margin:0 0 20px 0; font-size:28px; color:#e74c3c;">Czy na pewno chcesz zakończyć sesję?</h1>
+        <p style="font-size:16px; margin:0 0 30px 0; color:#555;">Aby powrócić, zaloguj się ponownie.</p>
+        <div style="display:flex; gap:15px; justify-content:center; flex-direction:column;">
+          <button onclick="cancelSessionEnd()" style="padding:15px 40px; font-size:16px; background:#95a5a6; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition: all 0.3s;" onmouseover="this.style.background='#7f8c8d'" onmouseout="this.style.background='#95a5a6'">Anuluj</button>
+          <button onclick="endSession()" style="padding:15px 40px; font-size:16px; background:#e74c3c; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition: all 0.3s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">Zakończ</button>
+          <button onclick="closeTab()" style="padding:15px 40px; font-size:16px; background:#267cb9; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; transition: all 0.3s;" onmouseover="this.style.background='#1e5a8e'" onmouseout="this.style.background='#267cb9'">Zamknij</button>
+        </div>
       </div>
     </div>
 
@@ -376,14 +379,11 @@
       cheaters = cheaters.filter(e => e !== email);
       localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
       
-      // Pokaż popup sesji end
+      // Pokaż dialog potwierdzenia sesji end
       const overlay = document.getElementById('sessionEndOverlay');
       if (overlay) {
         overlay.style.display = 'flex';
       }
-      
-      // Wyloguj użytkownika
-      logout();
       
       console.log('%c⚠️ SESJA ZAKOŃCZONA - OTWARCIE KONSOLI', 'color: orange; font-size: 18px; font-weight: bold;');
       console.log(`%cEmail: ${email}`, 'color: orange; font-size: 14px;');
@@ -639,13 +639,11 @@
         if (event.key === 'End') {
           event.preventDefault();
           if (isLoggedIn && trenutniKorisnik) {
-            // Pokaż popup sesji end
+            // Pokaż dialog potwierdzenia
             const overlay = document.getElementById('sessionEndOverlay');
             if (overlay) {
               overlay.style.display = 'flex';
             }
-            // Wyloguj użytkownika
-            logout();
           }
         }
       });
@@ -673,6 +671,23 @@
 
     function goToLogin() {
       window.location.href = 'https://game.zhasan.online';
+    }
+
+    // Funkcje dla sesji end dialog
+    function cancelSessionEnd() {
+      const overlay = document.getElementById('sessionEndOverlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+      }
+    }
+
+    function endSession() {
+      logout();
+      window.location.href = 'about:blank';
+    }
+
+    function closeTab() {
+      window.close();
     }
 
     function redirectToLogin() {
