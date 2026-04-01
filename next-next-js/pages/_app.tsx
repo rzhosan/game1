@@ -12,14 +12,16 @@ export default function App({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'End') {
+      console.log('Key pressed:', event.key, 'Code:', event.code)
+      if (event.key === 'End' || event.code === 'End') {
         event.preventDefault()
+        console.log('End key detected, opening dialog')
         setIsDialogOpen(true)
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
   }, [])
 
   const handleCancel = () => {
