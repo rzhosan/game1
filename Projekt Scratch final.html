@@ -275,10 +275,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       try {
         scaffolding.addCloudProvider(new Scaffolding.Cloud.LocalStorageProvider());
       } catch (error) {
-    const backButton = document.createElement('a');
-    backButton.href = 'index.html';
+    const backButton = document.createElement('button');
+    backButton.onclick = () => window.close();
     backButton.className = 'back-home-button';
-    backButton.textContent = '← BACK HOME';
+    backButton.textContent = '← CLOSE TAB';
     document.body.appendChild(backButton);
         console.error(error);
       }

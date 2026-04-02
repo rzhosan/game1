@@ -355,7 +355,7 @@
           <div id="roundInfo"></div>
         </div>
       </div>
-      <button class="back-button" onclick="backToMenu()">← Powrót do menu</button>
+      <button class="back-button" onclick="backToMenu()">← Zamknij grę</button>
     </div>
   </div>
 
@@ -617,10 +617,7 @@
     }
 
     function backToMenu() {
-      document.getElementById('gameArea').classList.remove('active');
-      document.getElementById('menu').classList.add('show');
-      rundy = 1;
-      wygraneRundy = 0;
+      window.close();
     }
 
     // Enable Enter key to submit
