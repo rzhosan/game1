@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Gra</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: Arial, sans-serif;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1 {
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+        }
+
+        #gameContainer {
+            border: 3px solid #0066cc;
+            background: #000;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+        }
+
+        #stats {
+            color: #0066cc;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .info {
+            color: #ffff00;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #ffff00;
+            color: #ffff00;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            font-size: 20px;
+        }
+
+        #gameOver h2 {
+            margin-bottom: 20px;
+            font-size: 40px;
+        }
+
+        #gameOver button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            background: #ffff00;
+            border: none;
+            color: #000;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #gameOver button:hover {
+            background: #ffff88;
+        }
+    </style>
+</head>
+<body>
+    <h1>👾 PAC-MAN 👾</h1>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="420" height="480"></canvas>
+        <div id="gameOver">
+            <h2 id="gameOverTitle">GAME OVER</h2>
+            <p id="gameOverScore">Punkty: 0</p>
+            <button onclick="location.reload()">Zagraj ponownie</button>
+        </div>
+    </div>
+    <div id="stats">
+        <div>Score: <span id="score">0</span></div>
+        <div>Lives: <span id="lives">3</span></div>
+    </div>
+    <div class="info">
+        Strzałki: Poruszanie | Zbieraj punkt | Unikaj duchów
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const TILE = 20;
+        const COLS = 21;
+        const ROWS = 24;
+
+        // Mapa labiryntu (0=ściana, 1=droga, 2=punkt, 3=moc punkt)
+        const maze = [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+            [0, 2, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 2, 0, 0, 2, 0],
+            [0, 3, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 2, 0, 0, 3, 0],
+            [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+            [0, 2, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 2, 0],
+            [0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+            [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+            [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+            [0, 2, 0, 0, 2, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 2, 0, 0, 2, 0],
+            [0, 3, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 3, 0],
+            [0, 0, 2, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, 0],
+            [0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 2, 2, 0],
+            [0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0],
+            [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ];
+
+        let pacman = { x: 1, y: 1, dir: 0, nextDir: 0 };
+        let ghosts = [
+            { x: 9, y: 10, color: '#ff0000' },
+            { x: 10, y: 10, color: '#ffb897' },
+            { x: 9, y: 11, color: '#00ffff' },
+            { x: 10, y: 11, color: '#ff7fff' }
+        ];
+
+        let score = 0;
+        let lives = 3;
+        let points = countPoints();
+        let gameOver = false;
+
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function countPoints() {
+            let count = 0;
+            for (let row of maze) {
+                for (let cell of row) {
+                    if (cell === 2 || cell === 3) count++;
+                }
+            }
+            return count;
+        }
+
+        function isWall(x, y) {
+            if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
+            return maze[y][x] === 0;
+        }
+
+        function canMove(x, y) {
+            return !isWall(x, y);
+        }
+
+        function eatPoint(x, y) {
+            if (maze[y][x] === 2) {
+                score += 10;
+                maze[y][x] = 1;
+                points--;
+            } else if (maze[y][x] === 3) {
+                score += 50;
+                maze[y][x] = 1;
+                points--;
+            }
+
+            if (points === 0) {
+                winGame();
+            }
+        }
+
+        function updatePacman() {
+            if (keys['arrowup'] || keys['w']) pacman.nextDir = 0;
+            if (keys['arrowdown'] || keys['s']) pacman.nextDir = 1;
+            if (keys['arrowleft'] || keys['a']) pacman.nextDir = 2;
+            if (keys['arrowright'] || keys['d']) pacman.nextDir = 3;
+
+            const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+            let [dx, dy] = dirs[pacman.nextDir];
+
+            if (canMove(pacman.x + dx, pacman.y + dy)) {
+                pacman.dir = pacman.nextDir;
+                pacman.x += dx;
+                pacman.y += dy;
+            } else {
+                [dx, dy] = dirs[pacman.dir];
+                if (canMove(pacman.x + dx, pacman.y + dy)) {
+                    pacman.x += dx;
+                    pacman.y += dy;
+                }
+            }
+
+            if (pacman.x < 0) pacman.x = COLS - 1;
+            if (pacman.x >= COLS) pacman.x = 0;
+
+            eatPoint(pacman.x, pacman.y);
+        }
+
+        function updateGhosts() {
+            ghosts.forEach(ghost => {
+                const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                const valid = dirs.filter(([dx, dy]) => canMove(ghost.x + dx, ghost.y + dy));
+                if (valid.length > 0) {
+                    const [dx, dy] = valid[Math.floor(Math.random() * valid.length)];
+                    ghost.x += dx;
+                    ghost.y += dy;
+                }
+                if (ghost.x < 0) ghost.x = COLS - 1;
+                if (ghost.x >= COLS) ghost.x = 0;
+            });
+        }
+
+        function checkCollisions() {
+            ghosts.forEach(ghost => {
+                if (pacman.x === ghost.x && pacman.y === ghost.y) {
+                    lives--;
+                    if (lives <= 0) {
+                        loseGame();
+                    } else {
+                        pacman.x = 1;
+                        pacman.y = 1;
+                    }
+                }
+            });
+        }
+
+        function winGame() {
+            gameOver = true;
+            document.getElementById('gameOverTitle').textContent = 'TY WYGRAŁEŚ!';
+            document.getElementById('gameOverScore').textContent = 'Punkty: ' + score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function loseGame() {
+            gameOver = true;
+            document.getElementById('gameOverTitle').textContent = 'GAME OVER';
+            document.getElementById('gameOverScore').textContent = 'Punkty: ' + score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function drawMaze() {
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (maze[y][x] === 0) {
+                        ctx.fillStyle = '#0033ff';
+                        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                    } else if (maze[y][x] === 2) {
+                        ctx.fillStyle = '#ffb897';
+                        ctx.fillRect(x * TILE + 8, y * TILE + 8, 4, 4);
+                    } else if (maze[y][x] === 3) {
+                        ctx.fillStyle = '#ffb897';
+                        ctx.fillRect(x * TILE + 5, y * TILE + 5, 10, 10);
+                    }
+                }
+            }
+        }
+
+        function drawPacman() {
+            const x = pacman.x * TILE + TILE / 2;
+            const y = pacman.y * TILE + TILE / 2;
+            const r = TILE / 2 - 1;
+            
+            let mouthAngle = 0.2 * Math.abs(Math.sin(Date.now() / 100));
+            const rotation = pacman.dir * Math.PI / 2;
+            const start = Math.PI / 4 + mouthAngle + rotation;
+            const end = Math.PI * 7 / 4 - mouthAngle + rotation;
+
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(x, y, r, start, end, false);
+            ctx.lineTo(x, y);
+            ctx.fill();
+        }
+
+        function drawGhosts() {
+            ghosts.forEach(ghost => {
+                const x = ghost.x * TILE + 1;
+                const y = ghost.y * TILE + 1;
+                
+                ctx.fillStyle = ghost.color;
+                ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 6);
+                ctx.beginPath();
+                ctx.arc(x + TILE / 2, y + TILE - 2, (TILE - 2) / 2, Math.PI, 0);
+                ctx.fill();
+
+                // Oczy
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x + 3, y + 3, 3, 3);
+                ctx.fillRect(x + TILE - 6, y + 3, 3, 3);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x + 4, y + 4, 1, 1);
+                ctx.fillRect(x + TILE - 5, y + 4, 1, 1);
+            });
+        }
+
+        function update() {
+            if (!gameOver) {
+                updatePacman();
+                updateGhosts();
+                checkCollisions();
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawMaze();
+            drawPacman();
+            drawGhosts();
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
