@@ -156,6 +156,7 @@
         let lives = 3;
         let points = countPoints();
         let gameOver = false;
+        let frameCount = 0;
 
         const keys = {};
         window.addEventListener('keydown', (e) => {
@@ -414,9 +415,13 @@
         function update() {
             if (!gameOver) {
                 updatePacman();
-                updateGhosts();
+                // Duchy poruszają się wolniej - co 8 ramek
+                if (frameCount % 8 === 0) {
+                    updateGhosts();
+                }
                 checkCollisions();
             }
+            frameCount++;
         }
 
         function draw() {
