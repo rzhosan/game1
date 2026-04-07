@@ -1,8 +1,7 @@
-import { getProviders, signIn } from 'next-auth/react'
+import { getProviders } from 'next-auth/react'
 import { GetServerSideProps } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import Image from 'next/image'
 import styles from '@/styles/Login.module.css'
 
 export default function LoginPage({
@@ -26,58 +25,51 @@ export default function LoginPage({
 
           <div className={styles.providersGrid}>
             {Object.values(providers || {}).map((provider: any) => (
-              <button
+              <form
                 key={provider.name}
-                onClick={() => {
-                  signIn(provider.id)
-                }}
-                className={styles.providerButton}
-                title={`Sign in with ${provider.name}`}
+                method="post"
+                action="/api/auth/signin"
+                style={{ margin: 0 }}
               >
-                <span className={styles.providerIcon}>
-                  {provider.id === 'github' && '🐙'}
-                  {provider.id === 'google' && '🔵'}
-                  {provider.id === 'credentials' && '✉️'}
-                </span>
-                <span className={styles.providerName}>
-                  Sign in with {provider.name}
-                </span>
-              </button>
+                <input type="hidden" name="provider" value={provider.id} />
+                <input type="hidden" name="callbackUrl" value="/" />
+                <button
+                  type="submit"
+                  className={styles.providerButton}
+                  title={`Sign in with ${provider.name}`}
+                >
+                  <span className={styles.providerIcon}>
+                    {provider.id === 'github' && '🐙'}
+                    {provider.id === 'google' && '🔵'}
+                    {provider.id === 'credentials' && '✉️'}
+                  </span>
+                  <span className={styles.providerName}>
+                    Sign in with {provider.name}
+                  </span>
+                </button>
+              </form>
             ))}
 
-            <button
-              onClick={() =>
-                signIn('guest', {
-                  callbackUrl: '/',
-                  redirect: true,
-                })
-              }
+
+            <Link
+              href={`/api/auth/signin?provider=guest&callbackUrl=/`}
               className={styles.providerButton}
               title="Sign in as Guest"
             >
               <span className={styles.providerIcon}>👤</span>
               <span className={styles.providerName}>Sign in as Guest</span>
-            </button>
+            </Link>
           </div>
 
           <div className={styles.divider}>OR</div>
 
           <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const email = (
-                (e.target as HTMLFormElement).elements.namedItem('email') as any
-              )?.value
-              if (email) {
-                signIn('credentials', {
-                  email,
-                  callbackUrl: '/',
-                  redirect: true,
-                })
-              }
-            }}
+            method="post"
+            action="/api/auth/signin"
             className={styles.emailForm}
           >
+            <input type="hidden" name="provider" value="credentials" />
+            <input type="hidden" name="callbackUrl" value="/" />
             <input
               type="email"
               name="email"
