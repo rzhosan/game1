@@ -48,6 +48,22 @@
             min-width: 300px;
         }
 
+        #powerStatus {
+            color: #ffff00;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        #powerStatus.active {
+            text-shadow: 0 0 10px #ffff00;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .info {
             color: #ffff00;
             font-size: 14px;
@@ -105,6 +121,7 @@
     <div id="stats">
         <div>Score: <span id="score">0</span></div>
         <div>Lives: <span id="lives">3</span></div>
+        <div id="powerStatus"></div>
     </div>
     <div class="info">
         Strzałki: Poruszanie | Zbieraj punkt | Unikaj duchów
@@ -160,6 +177,8 @@
         let points = countPoints();
         let gameOver = false;
         let frameCount = 0;
+        let powerMode = false;
+        let powerTimer = 0;
 
         const keys = {};
         window.addEventListener('keydown', (e) => {
@@ -200,6 +219,9 @@
                 score += 50;
                 maze[y][x] = 1;
                 points--;
+                // Aktywuj tryb mocy na 10 sekund
+                powerMode = true;
+                powerTimer = 600; // 10 sekund * 60 fps
             }
 
             if (points === 0) {
@@ -238,48 +260,53 @@
             ghosts.forEach((ghost, index) => {
                 let target = { x: pacman.x, y: pacman.y };
 
-                // Różne strategie dla każdego ducha
-                if (ghost.name === 'blinky') {
-                    // BLINKY (Czerwony) - goni bezpośrednio do Pac-Mana
-                    target = { x: pacman.x, y: pacman.y };
-                } 
-                else if (ghost.name === 'pinky') {
-                    // PINKY (Różowy) - target 4 kafelki PRZED Pac-Manem
-                    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-                    const [dx, dy] = dirs[pacman.dir];
+                // W trybie mocy duchy uciekają
+                if (powerMode) {
                     target = {
-                        x: pacman.x + dx * 4,
-                        y: pacman.y + dy * 4
+                        x: ghost.x - (pacman.x - ghost.x),
+                        y: ghost.y - (pacman.y - ghost.y)
                     };
                     target.x = Math.max(0, Math.min(COLS - 1, target.x));
                     target.y = Math.max(0, Math.min(ROWS - 1, target.y));
-                }
-                else if (ghost.name === 'inky') {
-                    // INKY (Cyan) - target między Pac-Manem a Blinky
-                    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-                    const [dx, dy] = dirs[pacman.dir];
-                    const aim = {
-                        x: pacman.x + dx * 2,
-                        y: pacman.y + dy * 2
-                    };
-                    target = {
-                        x: 2 * aim.x - ghosts[0].x,
-                        y: 2 * aim.y - ghosts[0].y
-                    };
-                    target.x = Math.max(0, Math.min(COLS - 1, target.x));
-                    target.y = Math.max(0, Math.min(ROWS - 1, target.y));
-                }
-                else if (ghost.name === 'clyde') {
-                    // CLYDE (Pomarańczowy) - goni dokąd możli, ale unika bliskoości
-                    const distToPac = Math.abs(ghost.x - pacman.x) + Math.abs(ghost.y - pacman.y);
-                    if (distToPac > 8) {
+                } else {
+                    // Normalne zachowania
+                    if (ghost.name === 'blinky') {
                         target = { x: pacman.x, y: pacman.y };
-                    } else {
-                        target = { x: 1, y: 1 }; // Uciekaj do kąta
+                    } 
+                    else if (ghost.name === 'pinky') {
+                        const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                        const [dx, dy] = dirs[pacman.dir];
+                        target = {
+                            x: pacman.x + dx * 4,
+                            y: pacman.y + dy * 4
+                        };
+                        target.x = Math.max(0, Math.min(COLS - 1, target.x));
+                        target.y = Math.max(0, Math.min(ROWS - 1, target.y));
+                    }
+                    else if (ghost.name === 'inky') {
+                        const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                        const [dx, dy] = dirs[pacman.dir];
+                        const aim = {
+                            x: pacman.x + dx * 2,
+                            y: pacman.y + dy * 2
+                        };
+                        target = {
+                            x: 2 * aim.x - ghosts[0].x,
+                            y: 2 * aim.y - ghosts[0].y
+                        };
+                        target.x = Math.max(0, Math.min(COLS - 1, target.x));
+                        target.y = Math.max(0, Math.min(ROWS - 1, target.y));
+                    }
+                    else if (ghost.name === 'clyde') {
+                        const distToPac = Math.abs(ghost.x - pacman.x) + Math.abs(ghost.y - pacman.y);
+                        if (distToPac > 8) {
+                            target = { x: pacman.x, y: pacman.y };
+                        } else {
+                            target = { x: 1, y: 1 };
+                        }
                     }
                 }
 
-                // BFS - najkrótsza ścieżka do celu
                 const path = findPath(ghost.x, ghost.y, target.x, target.y);
                 if (path.length > 1) {
                     ghost.x = path[1].x;
@@ -333,17 +360,26 @@
         }
 
         function checkCollisions() {
-            ghosts.forEach(ghost => {
+            for (let i = 0; i < ghosts.length; i++) {
+                const ghost = ghosts[i];
                 if (pacman.x === ghost.x && pacman.y === ghost.y) {
-                    lives--;
-                    if (lives <= 0) {
-                        loseGame();
+                    if (powerMode) {
+                        // Pac-Man je ducha w trybie mocy
+                        score += 200;
+                        ghost.x = 9 + (i % 2);
+                        ghost.y = 10 + Math.floor(i / 2);
                     } else {
-                        pacman.x = 1;
-                        pacman.y = 1;
+                        // Pac-Man przegrywa
+                        lives--;
+                        if (lives <= 0) {
+                            loseGame();
+                        } else {
+                            pacman.x = 1;
+                            pacman.y = 1;
+                        }
                     }
                 }
-            });
+            }
         }
 
         function winGame() {
@@ -448,7 +484,17 @@
                 const y = ghost.y * TILE + 1;
                 const size = TILE - 2;
                 
-                ctx.fillStyle = ghost.color;
+                // W trybie mocy duchy migają na biało/niebiesko
+                let ghostColor = ghost.color;
+                if (powerMode) {
+                    if (Math.floor(frameCount / 10) % 2 === 0) {
+                        ghostColor = '#0066ff';
+                    } else {
+                        ghostColor = '#ffffff';
+                    }
+                }
+                
+                ctx.fillStyle = ghostColor;
                 
                 // Główka (półkole)
                 ctx.beginPath();
@@ -467,15 +513,16 @@
                 ctx.fillRect(x + size / 2 - 1, y + size - 2, 2, 3 + wave);
                 ctx.fillRect(x + size - 5, y + size - 2, 2, 3 - wave);
 
-                // Oczy (białe)
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(x + 4, y + 5, 2, 2);
-                ctx.fillRect(x + size - 6, y + 5, 2, 2);
+                // Oczy tylko w normalnym trybie
+                if (!powerMode) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(x + 4, y + 5, 2, 2);
+                    ctx.fillRect(x + size - 6, y + 5, 2, 2);
 
-                // Źrenice (czarne)
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(x + 5, y + 6, 1, 1);
-                ctx.fillRect(x + size - 5, y + 6, 1, 1);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(x + 5, y + 6, 1, 1);
+                    ctx.fillRect(x + size - 5, y + 6, 1, 1);
+                }
             });
         }
 
@@ -487,6 +534,14 @@
                     updateGhosts();
                 }
                 checkCollisions();
+                
+                // Obsługuj timer mocy
+                if (powerMode) {
+                    powerTimer--;
+                    if (powerTimer <= 0) {
+                        powerMode = false;
+                    }
+                }
             }
             frameCount++;
         }
@@ -501,6 +556,17 @@
 
             document.getElementById('score').textContent = score;
             document.getElementById('lives').textContent = lives;
+
+            // Wyświetl status mocy
+            const powerEl = document.getElementById('powerStatus');
+            if (powerMode) {
+                const seconds = Math.ceil(powerTimer / 60);
+                powerEl.textContent = `⚡ POWER MODE: ${seconds}s ⚡`;
+                powerEl.classList.add('active');
+            } else {
+                powerEl.textContent = '';
+                powerEl.classList.remove('active');
+            }
         }
 
         function gameLoop() {
