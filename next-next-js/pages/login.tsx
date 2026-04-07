@@ -28,12 +28,12 @@ export default function LoginPage({
             {Object.values(providers || {}).map((provider: any) => (
               <button
                 key={provider.name}
-                onClick={() =>
-                  signIn(provider.id, {
+                onClick={async () => {
+                  await signIn(provider.id, {
                     callbackUrl: '/',
                     redirect: true,
                   })
-                }
+                }}
                 className={styles.providerButton}
                 title={`Sign in with ${provider.name}`}
               >
