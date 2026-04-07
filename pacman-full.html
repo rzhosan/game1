@@ -146,10 +146,10 @@
 
         let pacman = { x: 1, y: 1, dir: 0, nextDir: 0 };
         let ghosts = [
-            { x: 9, y: 10, color: '#ff0000' },
-            { x: 10, y: 10, color: '#ffb897' },
-            { x: 9, y: 11, color: '#00ffff' },
-            { x: 10, y: 11, color: '#ff7fff' }
+            { x: 9, y: 10, color: '#ff0000', name: 'blinky' },  // Czerwony - goni bezpośrednio
+            { x: 10, y: 10, color: '#ffb897', name: 'pinky' },   // Różowy - ambush
+            { x: 9, y: 11, color: '#00ffff', name: 'inky' },     // Cyan - złożone
+            { x: 10, y: 11, color: '#ff7fff', name: 'clyde' }    // Pomarańczowy - zmiennie
         ];
 
         let score = 0;
@@ -231,17 +231,101 @@
         }
 
         function updateGhosts() {
-            ghosts.forEach(ghost => {
-                const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
-                const valid = dirs.filter(([dx, dy]) => canMove(ghost.x + dx, ghost.y + dy));
-                if (valid.length > 0) {
-                    const [dx, dy] = valid[Math.floor(Math.random() * valid.length)];
-                    ghost.x += dx;
-                    ghost.y += dy;
+            ghosts.forEach((ghost, index) => {
+                let target = { x: pacman.x, y: pacman.y };
+
+                // Różne strategie dla każdego ducha
+                if (ghost.name === 'blinky') {
+                    // BLINKY (Czerwony) - goni bezpośrednio do Pac-Mana
+                    target = { x: pacman.x, y: pacman.y };
+                } 
+                else if (ghost.name === 'pinky') {
+                    // PINKY (Różowy) - target 4 kafelki PRZED Pac-Manem
+                    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                    const [dx, dy] = dirs[pacman.dir];
+                    target = {
+                        x: pacman.x + dx * 4,
+                        y: pacman.y + dy * 4
+                    };
+                    target.x = Math.max(0, Math.min(COLS - 1, target.x));
+                    target.y = Math.max(0, Math.min(ROWS - 1, target.y));
                 }
-                if (ghost.x < 0) ghost.x = COLS - 1;
-                if (ghost.x >= COLS) ghost.x = 0;
+                else if (ghost.name === 'inky') {
+                    // INKY (Cyan) - target między Pac-Manem a Blinky
+                    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                    const [dx, dy] = dirs[pacman.dir];
+                    const aim = {
+                        x: pacman.x + dx * 2,
+                        y: pacman.y + dy * 2
+                    };
+                    target = {
+                        x: 2 * aim.x - ghosts[0].x,
+                        y: 2 * aim.y - ghosts[0].y
+                    };
+                    target.x = Math.max(0, Math.min(COLS - 1, target.x));
+                    target.y = Math.max(0, Math.min(ROWS - 1, target.y));
+                }
+                else if (ghost.name === 'clyde') {
+                    // CLYDE (Pomarańczowy) - goni dokąd możli, ale unika bliskoości
+                    const distToPac = Math.abs(ghost.x - pacman.x) + Math.abs(ghost.y - pacman.y);
+                    if (distToPac > 8) {
+                        target = { x: pacman.x, y: pacman.y };
+                    } else {
+                        target = { x: 1, y: 1 }; // Uciekaj do kąta
+                    }
+                }
+
+                // BFS - najkrótsza ścieżka do celu
+                const path = findPath(ghost.x, ghost.y, target.x, target.y);
+                if (path.length > 1) {
+                    ghost.x = path[1].x;
+                    ghost.y = path[1].y;
+                }
             });
+        }
+
+        function findPath(startX, startY, goalX, goalY) {
+            const queue = [[{ x: startX, y: startY, path: [{ x: startX, y: startY }] }]];
+            const visited = new Set();
+            visited.add(startX + ',' + startY);
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (!current || !current[0]) break;
+
+                const { x, y, path } = current[0];
+
+                if (x === goalX && y === goalY) {
+                    return path;
+                }
+
+                const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+                for (const [dx, dy] of dirs) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    const key = nx + ',' + ny;
+
+                    if (canMove(nx, ny) && !visited.has(key)) {
+                        visited.add(key);
+                        queue.push([{
+                            x: nx,
+                            y: ny,
+                            path: [...path, { x: nx, y: ny }]
+                        }]);
+                    }
+                }
+
+                if (visited.size > 100) break; // Ograniczenie wyszukiwania
+            }
+
+            // Jeśli nie znaleziono ścieżki, poruszaj się losowo
+            const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+            const valid = dirs.filter(([dx, dy]) => canMove(startX + dx, startY + dy));
+            if (valid.length > 0) {
+                const [dx, dy] = valid[Math.floor(Math.random() * valid.length)];
+                return [{ x: startX, y: startY }, { x: startX + dx, y: startY + dy }];
+            }
+            return [{ x: startX, y: startY }];
         }
 
         function checkCollisions() {
