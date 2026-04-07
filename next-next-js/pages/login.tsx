@@ -29,13 +29,7 @@ export default function LoginPage({
               <button
                 key={provider.name}
                 onClick={() => {
-                  signIn(provider.id, { 
-                    redirect: false,
-                  }).then((result) => {
-                    if (result?.url) {
-                      window.location.href = result.url
-                    }
-                  })
+                  signIn(provider.id)
                 }}
                 className={styles.providerButton}
                 title={`Sign in with ${provider.name}`}
