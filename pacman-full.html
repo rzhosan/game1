@@ -25,6 +25,8 @@
         h1 {
             color: #ffff00;
             text-shadow: 0 0 10px #ffff00;
+            letter-spacing: 4px;
+            font-size: 32px;
         }
 
         #gameContainer {
@@ -359,17 +361,59 @@
         }
 
         function drawMaze() {
+            ctx.strokeStyle = '#0066ff';
+            ctx.lineWidth = 2;
+
             for (let y = 0; y < ROWS; y++) {
                 for (let x = 0; x < COLS; x++) {
                     if (maze[y][x] === 0) {
-                        ctx.fillStyle = '#0033ff';
-                        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                        // Rysuj niebieskie linie wokół ścian
+                        const left = maze[y][x - 1] !== 0;
+                        const right = maze[y][x + 1] !== 0;
+                        const top = y > 0 && maze[y - 1][x] !== 0;
+                        const bottom = y < ROWS - 1 && maze[y + 1][x] !== 0;
+
+                        // Lewa krawędź
+                        if (left) {
+                            ctx.beginPath();
+                            ctx.moveTo(x * TILE, y * TILE);
+                            ctx.lineTo(x * TILE, (y + 1) * TILE);
+                            ctx.stroke();
+                        }
+
+                        // Prawa krawędź
+                        if (right) {
+                            ctx.beginPath();
+                            ctx.moveTo((x + 1) * TILE, y * TILE);
+                            ctx.lineTo((x + 1) * TILE, (y + 1) * TILE);
+                            ctx.stroke();
+                        }
+
+                        // Górna krawędź
+                        if (top) {
+                            ctx.beginPath();
+                            ctx.moveTo(x * TILE, y * TILE);
+                            ctx.lineTo((x + 1) * TILE, y * TILE);
+                            ctx.stroke();
+                        }
+
+                        // Dolna krawędź
+                        if (bottom) {
+                            ctx.beginPath();
+                            ctx.moveTo(x * TILE, (y + 1) * TILE);
+                            ctx.lineTo((x + 1) * TILE, (y + 1) * TILE);
+                            ctx.stroke();
+                        }
                     } else if (maze[y][x] === 2) {
+                        // Mały punkt
                         ctx.fillStyle = '#ffb897';
                         ctx.fillRect(x * TILE + 8, y * TILE + 8, 4, 4);
                     } else if (maze[y][x] === 3) {
+                        // Duży punkt (moc)
                         ctx.fillStyle = '#ffb897';
-                        ctx.fillRect(x * TILE + 5, y * TILE + 5, 10, 10);
+                        ctx.beginPath();
+                        ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 4, 0, Math.PI * 2);
+                        ctx.fill();
                     }
                 }
             }
@@ -378,38 +422,60 @@
         function drawPacman() {
             const x = pacman.x * TILE + TILE / 2;
             const y = pacman.y * TILE + TILE / 2;
-            const r = TILE / 2 - 1;
+            const r = TILE / 2 - 2;
             
-            let mouthAngle = 0.2 * Math.abs(Math.sin(Date.now() / 100));
+            let mouthAngle = 0.3 * Math.abs(Math.sin(Date.now() / 100));
             const rotation = pacman.dir * Math.PI / 2;
-            const start = Math.PI / 4 + mouthAngle + rotation;
-            const end = Math.PI * 7 / 4 - mouthAngle + rotation;
+            const start = Math.PI / 5 + mouthAngle + rotation;
+            const end = Math.PI * 9 / 5 - mouthAngle + rotation;
 
             ctx.fillStyle = '#ffff00';
             ctx.beginPath();
             ctx.arc(x, y, r, start, end, false);
             ctx.lineTo(x, y);
             ctx.fill();
+
+            // Oczy
+            const eyeX = x + (TILE / 2 - 2) * Math.cos(rotation);
+            const eyeY = y + (TILE / 2 - 2) * Math.sin(rotation);
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(eyeX - 1, eyeY - 1, 2, 2);
         }
 
         function drawGhosts() {
-            ghosts.forEach(ghost => {
+            ghosts.forEach((ghost, index) => {
                 const x = ghost.x * TILE + 1;
                 const y = ghost.y * TILE + 1;
+                const size = TILE - 2;
                 
                 ctx.fillStyle = ghost.color;
-                ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 6);
+                
+                // Główka (półkole)
                 ctx.beginPath();
-                ctx.arc(x + TILE / 2, y + TILE - 2, (TILE - 2) / 2, Math.PI, 0);
+                ctx.moveTo(x + 1, y + size / 2);
+                ctx.lineTo(x + 1, y + 1);
+                ctx.arc(x + size / 2, y + size / 2, size / 2 - 1, Math.PI, 0);
+                ctx.lineTo(x + size - 1, y + size / 2);
                 ctx.fill();
 
-                // Oczy
+                // Ciało (prostokąt)
+                ctx.fillRect(x + 1, y + size / 2, size - 2, size / 2 - 1);
+
+                // Oscylujące "nogi" (falowy efekt)
+                const wave = Math.sin(Date.now() / 100 + index) * 2;
+                ctx.fillRect(x + 3, y + size - 2, 2, 3 + wave);
+                ctx.fillRect(x + size / 2 - 1, y + size - 2, 2, 3 + wave);
+                ctx.fillRect(x + size - 5, y + size - 2, 2, 3 - wave);
+
+                // Oczy (białe)
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(x + 3, y + 3, 3, 3);
-                ctx.fillRect(x + TILE - 6, y + 3, 3, 3);
+                ctx.fillRect(x + 4, y + 5, 2, 2);
+                ctx.fillRect(x + size - 6, y + 5, 2, 2);
+
+                // Źrenice (czarne)
                 ctx.fillStyle = '#000000';
-                ctx.fillRect(x + 4, y + 4, 1, 1);
-                ctx.fillRect(x + TILE - 5, y + 4, 1, 1);
+                ctx.fillRect(x + 5, y + 6, 1, 1);
+                ctx.fillRect(x + size - 5, y + 6, 1, 1);
             });
         }
 
