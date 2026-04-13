@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useState } from 'react'
 import styles from '@/styles/Home.module.css'
 
 interface GameData {
@@ -96,6 +97,20 @@ const games: GameData[] = [
 
 export default function Home() {
   const { data: session } = useSession()
+  const [currentPage, setCurrentPage] = useState(0)
+  
+  const GAMES_PER_PAGE = 6
+  const totalPages = Math.ceil(games.length / GAMES_PER_PAGE)
+  const startIndex = currentPage * GAMES_PER_PAGE
+  const displayedGames = games.slice(startIndex, startIndex + GAMES_PER_PAGE)
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => (prev > 0 ? prev - 1 : totalPages - 1))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0))
+  }
 
   return (
     <div className={styles.pageContainer}>
@@ -137,8 +152,28 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
+        <div className={styles.paginationContainer}>
+          <button
+            onClick={handlePrevPage}
+            className={styles.paginationButton}
+            title="Previous page"
+          >
+            ← PREV
+          </button>
+          <span className={styles.pageIndicator}>
+            Page {currentPage + 1} of {totalPages}
+          </span>
+          <button
+            onClick={handleNextPage}
+            className={styles.paginationButton}
+            title="Next page"
+          >
+            NEXT →
+          </button>
+        </div>
+
         <div className={styles.gamesGrid}>
-          {games.map((game) => (
+          {displayedGames.map((game) => (
             <Link href={game.path} key={game.id}>
               <div className={styles.gameCard}>
                 <div className={styles.gameIcon}>{game.icon}</div>
