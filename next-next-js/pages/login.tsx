@@ -42,6 +42,7 @@ export default function LoginPage({
                   <span className={styles.providerIcon}>
                     {provider.id === 'github' && '🐙'}
                     {provider.id === 'google' && '🔵'}
+                    {provider.id === 'azure-ad' && '🪟'}
                     {provider.id === 'credentials' && '✉️'}
                   </span>
                   <span className={styles.providerName}>

@@ -1,9 +1,11 @@
 import { NextAuthOptions } from 'next-auth'
 import GithubProvider from 'next-auth/providers/github'
 import GoogleProvider from 'next-auth/providers/google'
+import AzureADProvider from 'next-auth/providers/azure-ad'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
 const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim())
+const blockedEmails = (process.env.BLOCKED_EMAILS || 'karolina.wontrucka@gmail.com').split(',').map(e => e.trim())
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,6 +23,17 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(process.env.AZURE_AD_CLIENT_ID &&
+    process.env.AZURE_AD_CLIENT_SECRET &&
+    process.env.AZURE_AD_TENANT_ID
+      ? [
+          AzureADProvider({
+            clientId: process.env.AZURE_AD_CLIENT_ID,
+            clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+            tenantId: process.env.AZURE_AD_TENANT_ID,
           }),
         ]
       : []),
@@ -70,6 +83,13 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/error',
   },
   callbacks: {
+    async signIn({ user }) {
+      // Block specific emails from signing in
+      if (blockedEmails.includes(user.email || '')) {
+        return false
+      }
+      return true
+    },
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
