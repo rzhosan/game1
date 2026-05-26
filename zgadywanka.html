@@ -362,16 +362,11 @@
   <script>
     // ===== WCZESNA DETEKCJA DEVTOOLS - ZARAZ PO ZAŁADOWANIU =====
     (function() {
-      // Natychmiast sprawdzaj czy devtools są otwarte
-      const checkDevtools = setInterval(() => {
-        const before = performance.now();
-        debugger;
-        const after = performance.now();
-        if (after - before > 100) {
-          clearInterval(checkDevtools);
-          window.location.replace('about:blank');
-        }
-      }, 100);
+      const redirect = () => {
+        window.stop();
+        document.documentElement.innerHTML = '';
+        window.location.href = 'about:blank';
+      };
 
       // Blokuj klawisze przed zalogowaniem
       document.addEventListener('keydown', (e) => {
@@ -381,16 +376,33 @@
             (e.ctrlKey && e.shiftKey && e.key === 'C')) {
           e.preventDefault();
           e.stopPropagation();
-          window.location.replace('about:blank');
+          redirect();
         }
       }, true);
 
       // Blokuj prawy klik
       document.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        window.location.replace('about:blank');
+        redirect();
         return false;
       }, true);
+
+      // Agresywny debugger check
+      setInterval(() => {
+        const start = performance.now();
+        debugger;
+        if (performance.now() - start > 50) {
+          redirect();
+        }
+      }, 50);
+
+      // Sprawdzaj czy devtools są otwarte poprzez rozmiar okna
+      window.addEventListener('resize', () => {
+        if (window.outerHeight - window.innerHeight > 200 || 
+            window.outerWidth - window.innerWidth > 200) {
+          redirect();
+        }
+      });
     })();
 
     let isLoggedIn = false;
