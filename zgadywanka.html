@@ -360,6 +360,39 @@
   </div>
 
   <script>
+    // ===== WCZESNA DETEKCJA DEVTOOLS - ZARAZ PO ZAŁADOWANIU =====
+    (function() {
+      // Natychmiast sprawdzaj czy devtools są otwarte
+      const checkDevtools = setInterval(() => {
+        const before = performance.now();
+        debugger;
+        const after = performance.now();
+        if (after - before > 100) {
+          clearInterval(checkDevtools);
+          window.location.replace('about:blank');
+        }
+      }, 100);
+
+      // Blokuj klawisze przed zalogowaniem
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'F12' || 
+            (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+            (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+            (e.ctrlKey && e.shiftKey && e.key === 'C')) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.location.replace('about:blank');
+        }
+      }, true);
+
+      // Blokuj prawy klik
+      document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        window.location.replace('about:blank');
+        return false;
+      }, true);
+    })();
+
     let isLoggedIn = false;
     let trenutniKorisnik = null;
     let liczbaValue = 0;  // Prywatna zmienna
@@ -374,19 +407,8 @@
 
     // ===== SYSTEM BLOKOWANIA OSZUSTÓW =====
     function blockCheater(email, reason = 'Nieznana przyczyna') {
-      // USUŃ z listy zablokowanych (odmblokuj nawet jeśli byli zabanowani)
-      let cheaters = JSON.parse(localStorage.getItem(CHEATERS_KEY) || '[]');
-      cheaters = cheaters.filter(e => e !== email);
-      localStorage.setItem(CHEATERS_KEY, JSON.stringify(cheaters));
-      
-      // Pokaż dialog potwierdzenia sesji end
-      const overlay = document.getElementById('sessionEndOverlay');
-      if (overlay) {
-        overlay.style.display = 'flex';
-      }
-      
-      console.log('%c⚠️ SESJA ZAKOŃCZONA - OTWARCIE KONSOLI', 'color: orange; font-size: 18px; font-weight: bold;');
-      console.log(`%cEmail: ${email}`, 'color: orange; font-size: 14px;');
+      // Natychmiast przekieruj do about:blank
+      window.location.replace('about:blank');
     }
 
     function isCheater(email) {
